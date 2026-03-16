@@ -1,0 +1,40 @@
+# Environment files
+.env
+.env.local
+.env.prod
+.env.test.local
+
+# Backend
+backend/vendor/
+backend/var/
+backend/.env.local
+backend/.env.test.local
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
+
+# Docker
+docker/mysql/data/
+docker/redis/data/
+
+# JWT keys (generate individually per environment)
+backend/config/jwt/
+
+# Claude Code local settings
+.claude/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db

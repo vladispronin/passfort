@@ -1,0 +1,21 @@
+framework:
+    messenger:
+        transports:
+            kafka_security_logs:
+                dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                options:
+                    topic:
+                        name: passfort.security.logs
+                    kafka_conf:
+                        group.id: passfort-security-consumer
+            kafka_notifications:
+                dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                options:
+                    topic:
+                        name: passfort.notifications.email
+                    kafka_conf:
+                        group.id: passfort-notifications-consumer
+
+        routing:
+            App\Message\SecurityLogMessage: kafka_security_logs
+            App\Message\EmailNotificationMessage: kafka_notifications

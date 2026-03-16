@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  nginx:
+    restart: always
+    volumes:
+      - ./frontend/dist:/var/www/frontend/dist:ro
+
+  php:
+    restart: always
+    environment:
+      - APP_ENV=prod
+
+  mysql:
+    restart: always
+
+  redis:
+    restart: always
+
+  kafka:
+    restart: always
+
+  zookeeper:
+    restart: always
