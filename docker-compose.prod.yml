@@ -3,6 +3,9 @@ version: '3.8'
 services:
   nginx:
     restart: always
+    ports:
+      - "17080:80"
+      - "17443:443"
     volumes:
       - ./frontend/dist:/var/www/frontend/dist:ro
 
@@ -19,6 +22,8 @@ services:
 
   kafka:
     restart: always
+    ports:
+      - "17092:9092"
 
   zookeeper:
     restart: always
