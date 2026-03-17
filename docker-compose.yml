@@ -36,7 +36,10 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      kafka:
+        condition: service_started
     dns:
+      - 127.0.0.11
       - 8.8.8.8
       - 1.1.1.1
     networks:
@@ -127,7 +130,7 @@ services:
       - kafka
     volumes:
       - ./docker/kafka/create-topics.sh:/create-topics.sh:ro
-    command: sh -c "sleep 10 && /create-topics.sh"
+    command: sh -c "/create-topics.sh"
     networks:
       - passfort_network
 

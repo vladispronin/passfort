@@ -2,6 +2,13 @@
 
 KAFKA_HOST="kafka:29092"
 
+echo "Waiting for Kafka to be ready..."
+until kafka-topics --bootstrap-server $KAFKA_HOST --list > /dev/null 2>&1; do
+  echo "Kafka not ready yet, retrying in 2s..."
+  sleep 2
+done
+echo "Kafka is ready."
+
 echo "Creating Kafka topics..."
 
 kafka-topics --create \

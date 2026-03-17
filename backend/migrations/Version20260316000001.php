@@ -17,7 +17,7 @@ final class Version20260316000001 extends AbstractMigration
     public function up(Schema $schema): void
     {
         $this->addSql('CREATE TABLE users (
-            id VARCHAR(36) NOT NULL,
+            id BINARY(16) NOT NULL COMMENT \'(DC2Type:uuid)\',
             email VARCHAR(255) NOT NULL,
             password_hash VARCHAR(255) NOT NULL,
             master_password_hash VARCHAR(255) NOT NULL,
@@ -32,8 +32,8 @@ final class Version20260316000001 extends AbstractMigration
         ) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
 
         $this->addSql('CREATE TABLE vaults (
-            id VARCHAR(36) NOT NULL,
-            user_id VARCHAR(36) NOT NULL,
+            id BINARY(16) NOT NULL COMMENT \'(DC2Type:uuid)\',
+            user_id BINARY(16) NOT NULL COMMENT \'(DC2Type:uuid)\',
             name VARCHAR(255) NOT NULL,
             created_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\',
             updated_at DATETIME NOT NULL COMMENT \'(DC2Type:datetime_immutable)\',
@@ -43,8 +43,8 @@ final class Version20260316000001 extends AbstractMigration
         ) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
 
         $this->addSql('CREATE TABLE categories (
-            id VARCHAR(36) NOT NULL,
-            vault_id VARCHAR(36) NOT NULL,
+            id BINARY(16) NOT NULL COMMENT \'(DC2Type:uuid)\',
+            vault_id BINARY(16) NOT NULL COMMENT \'(DC2Type:uuid)\',
             name VARCHAR(255) NOT NULL,
             color VARCHAR(7) DEFAULT NULL,
             icon VARCHAR(50) DEFAULT NULL,
@@ -55,9 +55,9 @@ final class Version20260316000001 extends AbstractMigration
         ) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
 
         $this->addSql('CREATE TABLE vault_items (
-            id VARCHAR(36) NOT NULL,
-            vault_id VARCHAR(36) NOT NULL,
-            category_id VARCHAR(36) DEFAULT NULL,
+            id BINARY(16) NOT NULL COMMENT \'(DC2Type:uuid)\',
+            vault_id BINARY(16) NOT NULL COMMENT \'(DC2Type:uuid)\',
+            category_id BINARY(16) DEFAULT NULL COMMENT \'(DC2Type:uuid)\',
             encrypted_data LONGTEXT NOT NULL,
             iv VARCHAR(24) NOT NULL,
             auth_tag VARCHAR(24) NOT NULL,
@@ -74,8 +74,8 @@ final class Version20260316000001 extends AbstractMigration
         ) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB');
 
         $this->addSql('CREATE TABLE refresh_tokens (
-            id VARCHAR(36) NOT NULL,
-            user_id VARCHAR(36) NOT NULL,
+            id BINARY(16) NOT NULL COMMENT \'(DC2Type:uuid)\',
+            user_id BINARY(16) NOT NULL COMMENT \'(DC2Type:uuid)\',
             token_hash VARCHAR(64) NOT NULL,
             device_info VARCHAR(255) DEFAULT NULL,
             ip_address VARCHAR(45) DEFAULT NULL,
@@ -89,7 +89,7 @@ final class Version20260316000001 extends AbstractMigration
 
         $this->addSql('CREATE TABLE security_logs (
             id BIGINT AUTO_INCREMENT NOT NULL,
-            user_id VARCHAR(36) DEFAULT NULL,
+            user_id BINARY(16) DEFAULT NULL COMMENT \'(DC2Type:uuid)\',
             action VARCHAR(100) NOT NULL,
             ip_address VARCHAR(45) DEFAULT NULL,
             user_agent VARCHAR(500) DEFAULT NULL,

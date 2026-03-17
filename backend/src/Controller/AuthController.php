@@ -14,6 +14,7 @@ use App\Trait\ApiResponseTrait;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\Routing\Annotation\Route;
@@ -29,6 +30,8 @@ class AuthController extends AbstractController
         private readonly RefreshTokenService $refreshTokenService,
         private readonly TokenService $tokenService,
         private readonly SecurityLogService $securityLogService,
+        #[Autowire(env: 'bool:RATE_LIMITER_ENABLED')]
+        private readonly bool $rateLimiterEnabled = true,
     ) {}
 
     #[Route('/kdf-params', methods: ['GET'])]
@@ -45,9 +48,11 @@ class AuthController extends AbstractController
         Request $request,
         RateLimiterFactory $authRegisterLimiter,
     ): JsonResponse {
-        $limiter = $authRegisterLimiter->create($request->getClientIp());
-        if (!$limiter->consume()->isAccepted()) {
-            return $this->errorResponse('Too many requests', 429);
+        if ($this->rateLimiterEnabled) {
+            $limiter = $authRegisterLimiter->create($request->getClientIp());
+            if (!$limiter->consume()->isAccepted()) {
+                return $this->errorResponse('Too many requests', 429);
+            }
         }
 
         try {
@@ -69,9 +74,11 @@ class AuthController extends AbstractController
         Request $request,
         RateLimiterFactory $authLoginLimiter,
     ): JsonResponse {
-        $limiter = $authLoginLimiter->create($request->getClientIp());
-        if (!$limiter->consume()->isAccepted()) {
-            return $this->errorResponse('Too many requests', 429);
+        if ($this->rateLimiterEnabled) {
+            $limiter = $authLoginLimiter->create($request->getClientIp());
+            if (!$limiter->consume()->isAccepted()) {
+                return $this->errorResponse('Too many requests', 429);
+            }
         }
 
         try {
@@ -101,9 +108,11 @@ class AuthController extends AbstractController
         Request $request,
         RateLimiterFactory $authRefreshLimiter,
     ): JsonResponse {
-        $limiter = $authRefreshLimiter->create($request->getClientIp());
-        if (!$limiter->consume()->isAccepted()) {
-            return $this->errorResponse('Too many requests', 429);
+        if ($this->rateLimiterEnabled) {
+            $limiter = $authRefreshLimiter->create($request->getClientIp());
+            if (!$limiter->consume()->isAccepted()) {
+                return $this->errorResponse('Too many requests', 429);
+            }
         }
 
         $data = json_decode($request->getContent(), true);
