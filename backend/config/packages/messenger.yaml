@@ -21,3 +21,11 @@ framework:
         routing:
             App\Message\SecurityLogMessage: kafka_security_logs
             App\Message\EmailNotificationMessage: kafka_notifications
+
+# В тестовом окружении используем in-memory транспорты (без Kafka)
+when@test:
+    framework:
+        messenger:
+            transports:
+                kafka_security_logs: 'in-memory://'
+                kafka_notifications: 'in-memory://'
