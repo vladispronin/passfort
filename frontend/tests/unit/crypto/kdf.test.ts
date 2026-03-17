@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { deriveEncryptionKey, deriveVerifyHash } from '../../../src/crypto/kdf'
-import { toBase64, randomBytes } from '../../../src/crypto/utils'
+import { toBase64 } from '../../../src/crypto/utils'
 
 describe('KDF Module', () => {
   const mockSalt = toBase64(new Uint8Array(32).fill(1))
