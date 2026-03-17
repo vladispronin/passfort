@@ -65,6 +65,8 @@ jobs:
           echo "APP_ENV=test" > backend/.env
           echo "DATABASE_URL=mysql://passfort_user:passfort_password@127.0.0.1:3306/passfort_test?serverVersion=8.0&charset=utf8mb4" >> backend/.env
           echo "REDIS_URL=redis://127.0.0.1:6379" >> backend/.env
+          echo "REDIS_DSN=redis://127.0.0.1:6379" >> backend/.env
+          echo "MESSENGER_TRANSPORT_DSN=kafka://localhost:9092" >> backend/.env
           echo "JWT_SECRET_KEY=%kernel.project_dir%/config/jwt/private.pem" >> backend/.env
           echo "JWT_PUBLIC_KEY=%kernel.project_dir%/config/jwt/public.pem" >> backend/.env
           echo "JWT_PASSPHRASE=jkl" >> backend/.env
@@ -78,6 +80,7 @@ jobs:
           echo "APP_ENV=test" > backend/.env.test
           echo "DATABASE_URL=mysql://passfort_user:passfort_password@127.0.0.1:3306/passfort_test?serverVersion=8.0&charset=utf8mb4" >> backend/.env.test
           echo "REDIS_URL=redis://127.0.0.1:6379" >> backend/.env.test
+          echo "REDIS_DSN=redis://127.0.0.1:6379" >> backend/.env.test
 
       - name: Установка зависимостей Composer
         run: cd backend && composer install --no-interaction --prefer-dist --optimize-autoloader
