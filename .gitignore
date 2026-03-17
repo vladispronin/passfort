@@ -1,5 +1,4 @@
-# Environment files
-.env
+# Environment files (локальные и продакшн-оверрайды — не коммитить)
 .env.local
 .env.prod
 .env.test.local
@@ -8,6 +7,7 @@
 backend/vendor/
 backend/var/
 backend/.env.local
+backend/.env.prod
 backend/.env.test.local
 
 # Frontend
