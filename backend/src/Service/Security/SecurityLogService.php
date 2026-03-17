@@ -47,14 +47,18 @@ class SecurityLogService
         ?Request $request,
         array $metadata,
     ): void {
-        $log = new SecurityLog();
-        $log->setAction($action);
-        $log->setUser($user);
-        $log->setIpAddress($request?->getClientIp());
-        $log->setUserAgent($request?->headers->get('User-Agent'));
-        $log->setMetadata($metadata);
+        try {
+            $log = new SecurityLog();
+            $log->setAction($action);
+            $log->setUser($user);
+            $log->setIpAddress($request?->getClientIp());
+            $log->setUserAgent($request?->headers->get('User-Agent'));
+            $log->setMetadata($metadata);
 
-        $this->em->persist($log);
-        $this->em->flush();
+            $this->em->persist($log);
+            $this->em->flush();
+        } catch (\Throwable) {
+            // Fallback-запись не должна ломать основной запрос
+        }
     }
 }

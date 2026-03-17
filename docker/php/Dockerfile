@@ -35,6 +35,9 @@ RUN pecl install rdkafka && docker-php-ext-enable rdkafka
 # Install opcache
 RUN docker-php-ext-install opcache
 
+# Install Xdebug
+RUN pecl install xdebug && docker-php-ext-enable xdebug
+
 # Install Composer
 COPY --from=composer:2.7 /usr/bin/composer /usr/bin/composer
 

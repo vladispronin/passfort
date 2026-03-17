@@ -4,6 +4,7 @@ framework:
             kafka_security_logs:
                 dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
                 options:
+                    flushTimeout: 1000
                     topic:
                         name: passfort.security.logs
                     kafka_conf:
@@ -11,6 +12,7 @@ framework:
             kafka_notifications:
                 dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
                 options:
+                    flushTimeout: 1000
                     topic:
                         name: passfort.notifications.email
                     kafka_conf:

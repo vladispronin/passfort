@@ -4,12 +4,17 @@ declare(strict_types=1);
 
 namespace App\EventListener;
 
+use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 class ExceptionListener
 {
+    public function __construct(
+        private readonly LoggerInterface $logger,
+    ) {}
+
     public function onKernelException(ExceptionEvent $event): void
     {
         $exception = $event->getThrowable();
@@ -26,6 +31,12 @@ class ExceptionListener
         } else {
             $statusCode = 500;
             $message = 'Internal Server Error';
+            $this->logger->error('Unhandled exception', [
+                'exception' => get_class($exception),
+                'message' => $exception->getMessage(),
+                'file' => $exception->getFile(),
+                'line' => $exception->getLine(),
+            ]);
         }
 
         $response = new JsonResponse([

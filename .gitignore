@@ -1,5 +1,5 @@
 # Environment files
-.env
+/.env
 .env.local
 .env.prod
 .env.test.local
@@ -7,7 +7,9 @@
 # Backend
 backend/vendor/
 backend/var/
+backend/.env
 backend/.env.local
+backend/.env.prod
 backend/.env.test.local
 
 # Frontend
