@@ -72,6 +72,7 @@ jobs:
           echo "KAFKA_BROKERS=localhost:9092" >> backend/.env
           echo "RATE_LIMITER_ENABLED=false" >> backend/.env
           echo "LOCK_DSN=flock" >> backend/.env
+          echo "DEFAULT_URI=http://localhost" >> backend/.env
 
       - name: Установка зависимостей Composer
         run: cd backend && composer install --no-interaction --prefer-dist --optimize-autoloader

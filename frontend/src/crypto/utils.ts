@@ -11,7 +11,7 @@ export function toBase64(buffer: ArrayBuffer | Uint8Array): string {
   return btoa(binary)
 }
 
-export function fromBase64(base64: string): Uint8Array {
+export function fromBase64(base64: string): Uint8Array<ArrayBuffer> {
   const binary = atob(base64)
   const bytes = new Uint8Array(binary.length)
   for (let i = 0; i < binary.length; i++) {
@@ -27,7 +27,7 @@ export function toHex(buffer: ArrayBuffer | Uint8Array): string {
     .join('')
 }
 
-export function fromHex(hex: string): Uint8Array {
+export function fromHex(hex: string): Uint8Array<ArrayBuffer> {
   const bytes = new Uint8Array(hex.length / 2)
   for (let i = 0; i < hex.length; i += 2) {
     bytes[i / 2] = parseInt(hex.slice(i, i + 2), 16)
@@ -35,7 +35,7 @@ export function fromHex(hex: string): Uint8Array {
   return bytes
 }
 
-export function randomBytes(length: number): Uint8Array {
+export function randomBytes(length: number): Uint8Array<ArrayBuffer> {
   const bytes = new Uint8Array(length)
   crypto.getRandomValues(bytes)
   return bytes
@@ -45,7 +45,7 @@ export function generateSalt(): string {
   return toBase64(randomBytes(32))
 }
 
-export function encodeText(text: string): Uint8Array {
+export function encodeText(text: string): Uint8Array<ArrayBuffer> {
   return new TextEncoder().encode(text)
 }
 
