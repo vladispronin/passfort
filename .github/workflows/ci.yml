@@ -54,6 +54,12 @@ jobs:
           key: ${{ runner.os }}-composer-${{ hashFiles('backend/composer.lock') }}
           restore-keys: ${{ runner.os }}-composer-
 
+      - name: Генерация JWT ключей
+        run: |
+          mkdir -p backend/config/jwt
+          openssl genpkey -algorithm RSA -out backend/config/jwt/private.pem -pkeyopt rsa_keygen_bits:4096 -pass pass:jkl
+          openssl rsa -pubout -in backend/config/jwt/private.pem -out backend/config/jwt/public.pem -passin pass:jkl
+
       - name: Создание .env для CI
         run: |
           echo "APP_ENV=test" > backend/.env
