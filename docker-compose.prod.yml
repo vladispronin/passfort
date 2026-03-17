@@ -8,6 +8,7 @@ services:
       - "17443:443"
     volumes:
       - ./frontend/dist:/var/www/frontend/dist:ro
+      - ./docker/nginx/conf.d/prod:/etc/nginx/conf.d:ro
 
   php:
     restart: always

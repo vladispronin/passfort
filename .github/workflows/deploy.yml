@@ -24,11 +24,14 @@ jobs:
             echo "==> Получение последних изменений..."
             git pull origin master
 
+            echo "==> Сборка фронтенда..."
+            docker run --rm -v $(pwd)/frontend:/app -w /app node:20-alpine sh -c "npm ci && npm run build"
+
             echo "==> Сборка контейнеров PHP и Nginx..."
             docker compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache php nginx
 
             echo "==> Запуск контейнеров..."
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d nginx php mysql redis kafka zookeeper
 
             echo "==> Ожидание запуска PHP контейнера..."
             sleep 5
