@@ -58,12 +58,15 @@ export function useAuth() {
 
   async function unlock(masterPassword: string): Promise<void> {
     const authStore = useAuthStore()
+
+    // После перезагрузки страницы user может быть null, загружаем профиль
     if (!authStore.user) {
-      throw new Error('User not loaded')
+      const profile = await authApi.getMe()
+      authStore.setUser(profile)
     }
 
-    const encKey = await deriveEncryptionKey(masterPassword, authStore.user.salt)
-    authStore.setEncryptionKey(encKey, authStore.user.salt)
+    const encKey = await deriveEncryptionKey(masterPassword, authStore.user!.salt)
+    authStore.setEncryptionKey(encKey, authStore.user!.salt)
 
     await router.push('/vault')
   }
