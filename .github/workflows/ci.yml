@@ -76,6 +76,7 @@ jobs:
           echo "LOCK_DSN=flock" >> backend/.env
           echo "DEFAULT_URI=http://localhost" >> backend/.env
           echo "APP_SECRET=ci_test_secret_not_used_in_prod" >> backend/.env
+          echo "CORS_ALLOW_ORIGIN=.*" >> backend/.env
           # Переопределяем .env.test чтобы использовать 127.0.0.1 вместо Docker-хоста mysql
           echo "APP_ENV=test" > backend/.env.test
           echo "DATABASE_URL=mysql://passfort_user:passfort_password@127.0.0.1:3306/passfort_test?serverVersion=8.0&charset=utf8mb4" >> backend/.env.test
