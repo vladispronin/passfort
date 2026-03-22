@@ -37,7 +37,7 @@ services:
       redis:
         condition: service_healthy
       kafka:
-        condition: service_started
+        condition: service_healthy
     dns:
       - 127.0.0.11
       - 8.8.8.8
@@ -96,19 +96,27 @@ services:
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
+    restart: unless-stopped
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     volumes:
       - zookeeper_data:/var/lib/zookeeper/data
       - zookeeper_logs:/var/lib/zookeeper/log
+    healthcheck:
+      test: ["CMD", "bash", "-c", "nc -z localhost 2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - passfort_network
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
+    restart: unless-stopped
     depends_on:
-      - zookeeper
+      zookeeper:
+        condition: service_healthy
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -117,20 +125,57 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'false'
+      # Короткий таймаут сессии ZooKeeper — при краше Kafka эфемерные узлы
+      # брокера очищаются быстрее, что позволяет перезапуститься без ошибки NodeExists
+      KAFKA_ZOOKEEPER_SESSION_TIMEOUT_MS: 6000
+      KAFKA_ZOOKEEPER_CONNECTION_TIMEOUT_MS: 6000
     volumes:
       - kafka_data:/var/lib/kafka/data
     ports:
       - "19092:9092"
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:29092", "--list"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     networks:
       - passfort_network
 
   kafka-init:
     image: confluentinc/cp-kafka:7.5.0
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
     volumes:
       - ./docker/kafka/create-topics.sh:/create-topics.sh:ro
     command: sh -c "/create-topics.sh"
+    networks:
+      - passfort_network
+
+  messenger-worker:
+    image: passfort-php:latest
+    entrypoint: ["/docker-entrypoint-worker.sh"]
+    command: ["php", "bin/console", "messenger:consume", "kafka_security_logs", "kafka_notifications", "--memory-limit=128M", "--time-limit=3600", "-v"]
+    working_dir: /var/www/backend
+    volumes:
+      - ./backend:/var/www/backend
+      - ./docker/php/php.ini:/usr/local/etc/php/conf.d/custom.ini:ro
+      - ./docker/php/docker-entrypoint-worker.sh:/docker-entrypoint-worker.sh:ro
+    environment:
+      - APP_ENV=${APP_ENV:-dev}
+    env_file:
+      - .env
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      php:
+        condition: service_started
+    restart: unless-stopped
     networks:
       - passfort_network
 
