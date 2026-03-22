@@ -40,7 +40,7 @@ jobs:
             sleep 5
 
             echo "==> Установка зависимостей Composer..."
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T php composer install --no-interaction --no-dev --optimize-autoloader
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T -e COMPOSER_MEMORY_LIMIT=-1 php composer install --no-interaction --no-dev --optimize-autoloader
 
             echo "==> Запуск миграций БД..."
             docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T php php bin/console doctrine:migrations:migrate --no-interaction --env=prod
