@@ -9,6 +9,10 @@ framework:
                         name: passfort.security.logs
                     kafka_conf:
                         group.id: passfort-security-consumer
+                        # Таймаут сокета: при недоступности Kafka воркер не зависает дольше 3 сек
+                        socket.timeout.ms: '3000'
+                        # Таймаут доставки сообщения: после этого rdkafka возвращает ошибку и срабатывает fallback
+                        message.timeout.ms: '3000'
             kafka_notifications:
                 dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
                 options:
@@ -17,6 +21,8 @@ framework:
                         name: passfort.notifications.email
                     kafka_conf:
                         group.id: passfort-notifications-consumer
+                        socket.timeout.ms: '3000'
+                        message.timeout.ms: '3000'
 
         routing:
             App\Message\SecurityLogMessage: kafka_security_logs

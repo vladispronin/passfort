@@ -44,9 +44,10 @@ COPY --from=composer:2.7 /usr/bin/composer /usr/bin/composer
 # Set working directory
 WORKDIR /var/www/backend
 
-# Copy entrypoint
+# Copy entrypoints
 COPY docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
+COPY docker-entrypoint-worker.sh /docker-entrypoint-worker.sh
+RUN chmod +x /docker-entrypoint.sh /docker-entrypoint-worker.sh
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["php-fpm"]
