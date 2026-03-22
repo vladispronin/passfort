@@ -34,7 +34,14 @@ jobs:
             docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d nginx php mysql redis kafka zookeeper kafka-init messenger-worker
 
             echo "==> Ожидание запуска PHP контейнера..."
-            sleep 5
+            for i in $(seq 1 30); do
+              if docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T php echo "ready" > /dev/null 2>&1; then
+                echo "PHP container is ready"
+                break
+              fi
+              echo "Attempt $i: PHP not ready, waiting 3s..."
+              sleep 3
+            done
 
             echo "==> Установка зависимостей Composer..."
             docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T -e COMPOSER_MEMORY_LIMIT=-1 php composer install --no-interaction --no-dev --optimize-autoloader
