@@ -31,7 +31,7 @@ jobs:
             docker compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache php nginx
 
             echo "==> Запуск контейнеров..."
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d nginx php mysql redis kafka zookeeper
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d nginx php mysql redis kafka zookeeper kafka-init messenger-worker
 
             echo "==> Ожидание запуска PHP контейнера..."
             sleep 5
