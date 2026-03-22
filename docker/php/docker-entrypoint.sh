@@ -1,9 +1,13 @@
 #!/bin/sh
 set -e
 
-# Устанавливаем зависимости (всегда, чтобы гарантировать согласованность с composer.lock)
+# Устанавливаем зависимости (в prod без dev-пакетов)
 echo "Installing Composer dependencies..."
-cd /var/www/backend && composer install --no-interaction --prefer-dist
+if [ "$APP_ENV" = "prod" ]; then
+    cd /var/www/backend && COMPOSER_MEMORY_LIMIT=-1 composer install --no-interaction --prefer-dist --no-dev --optimize-autoloader
+else
+    cd /var/www/backend && composer install --no-interaction --prefer-dist
+fi
 
 # Generate JWT keys if they don't exist
 if [ ! -f "/var/www/backend/config/jwt/private.pem" ]; then
