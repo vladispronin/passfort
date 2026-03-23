@@ -25,6 +25,17 @@ export const useCategoriesStore = defineStore('categories', () => {
     return category
   }
 
+  async function updateCategory(
+    vaultId: string,
+    categoryId: string,
+    payload: CreateCategoryPayload,
+  ): Promise<Category> {
+    const updated = await categoriesApi.update(vaultId, categoryId, payload)
+    const index = categories.value.findIndex((c) => c.id === categoryId)
+    if (index !== -1) categories.value[index] = updated
+    return updated
+  }
+
   async function deleteCategory(vaultId: string, categoryId: string): Promise<void> {
     await categoriesApi.delete(vaultId, categoryId)
     categories.value = categories.value.filter((c) => c.id !== categoryId)
@@ -39,6 +50,7 @@ export const useCategoriesStore = defineStore('categories', () => {
     isLoading,
     loadCategories,
     createCategory,
+    updateCategory,
     deleteCategory,
     reset,
   }

@@ -40,7 +40,7 @@ class CategoryService
     {
         $category = $this->repository->find($id);
 
-        if ($category === null || $category->getVault()->getId() !== $vault->getId()) {
+        if ($category === null || $category->getVault()->getId()?->toRfc4122() !== $vault->getId()?->toRfc4122()) {
             throw new \RuntimeException('Category not found');
         }
 

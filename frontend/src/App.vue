@@ -22,10 +22,10 @@ onMounted(() => {
         :key="toast.id"
         class="px-4 py-3 rounded-lg shadow-lg text-white text-sm max-w-xs"
         :class="{
-          'bg-green-600': toast.type === 'success',
-          'bg-red-600': toast.type === 'error',
-          'bg-yellow-600': toast.type === 'warning',
-          'bg-blue-600': toast.type === 'info',
+          'bg-emerald-600': toast.type === 'success',
+          'bg-rose-600': toast.type === 'error',
+          'bg-amber-500': toast.type === 'warning',
+          'bg-brand-500': toast.type === 'info',
         }"
       >
         {{ toast.message }}

@@ -52,7 +52,7 @@ class VaultItemService
     {
         $item = $this->repository->find($id);
 
-        if ($item === null || $item->getVault()->getId() !== $vault->getId()) {
+        if ($item === null || $item->getVault()->getId()?->toRfc4122() !== $vault->getId()?->toRfc4122()) {
             throw new \RuntimeException('Item not found');
         }
 
