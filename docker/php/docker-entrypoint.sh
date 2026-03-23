@@ -25,6 +25,6 @@ echo "Setting up var directory permissions..."
 mkdir -p /var/www/backend/var/cache/prod/doctrine/orm/Proxies
 mkdir -p /var/www/backend/var/cache/dev/doctrine/orm/Proxies
 mkdir -p /var/www/backend/var/log
-chown -R www-data:www-data /var/www/backend/var/ 2>/dev/null || chmod -R 777 /var/www/backend/var/
+chmod -R 777 /var/www/backend/var/
 
 exec "$@"

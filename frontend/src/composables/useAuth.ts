@@ -45,6 +45,9 @@ export function useAuth() {
     const tokens = await authApi.login({ email, masterPasswordHash })
     authStore.setTokens(tokens.access_token, tokens.refresh_token)
 
+    // Сохраняем хэш для верификации при последующей разблокировке
+    authStore.setMasterPasswordHash(masterPasswordHash)
+
     // Загружаем профиль
     const profile = await authApi.getMe()
     authStore.setUser(profile)
@@ -63,6 +66,21 @@ export function useAuth() {
     if (!authStore.user) {
       const profile = await authApi.getMe()
       authStore.setUser(profile)
+    }
+
+    // Верифицируем мастер-пароль перед разблокировкой
+    const storedHash = authStore.getMasterPasswordHash()
+    if (!storedHash) {
+      // Хэш не сохранён — требуем повторный логин
+      authStore.clearAuth()
+      await router.push('/login')
+      uiStore.showToast('Session expired, please log in again', 'info')
+      return
+    }
+
+    const derivedHash = await deriveVerifyHash(masterPassword, authStore.user!.salt)
+    if (derivedHash !== storedHash) {
+      throw new Error('Invalid master password')
     }
 
     const encKey = await deriveEncryptionKey(masterPassword, authStore.user!.salt)

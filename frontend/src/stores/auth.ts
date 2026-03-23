@@ -30,6 +30,14 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = profile
   }
 
+  function setMasterPasswordHash(hash: string): void {
+    localStorage.setItem('master_password_hash', hash)
+  }
+
+  function getMasterPasswordHash(): string | null {
+    return localStorage.getItem('master_password_hash')
+  }
+
   function clearAuth(): void {
     accessToken.value = null
     user.value = null
@@ -37,6 +45,7 @@ export const useAuthStore = defineStore('auth', () => {
     userSalt.value = null
     localStorage.removeItem('access_token')
     localStorage.removeItem('refresh_token')
+    localStorage.removeItem('master_password_hash')
   }
 
   function lockVault(): void {
@@ -62,6 +71,8 @@ export const useAuthStore = defineStore('auth', () => {
     setTokens,
     setEncryptionKey,
     setUser,
+    setMasterPasswordHash,
+    getMasterPasswordHash,
     clearAuth,
     lockVault,
     initFromStorage,
