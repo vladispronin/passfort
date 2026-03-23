@@ -10,14 +10,26 @@ export const useVaultItemsStore = defineStore('vaultItems', () => {
   const decryptedItems = ref<Map<string, DecryptedItemData>>(new Map())
   const isLoading = ref(false)
   const searchQuery = ref('')
+  const selectedCategoryId = ref<string | null>(null)
 
   const filteredItems = computed(() => {
-    if (!searchQuery.value) return items.value
-    const query = searchQuery.value.toLowerCase()
-    return items.value.filter((item) =>
-      item.titleHint.toLowerCase().includes(query),
-    )
+    let result = items.value
+
+    if (selectedCategoryId.value !== null) {
+      result = result.filter((item) => item.categoryId === selectedCategoryId.value)
+    }
+
+    if (searchQuery.value) {
+      const query = searchQuery.value.toLowerCase()
+      result = result.filter((item) => item.titleHint.toLowerCase().includes(query))
+    }
+
+    return result
   })
+
+  function setFilter(categoryId: string | null): void {
+    selectedCategoryId.value = categoryId
+  }
 
   const favoriteItems = computed(() =>
     items.value.filter((item) => item.isFavorite),
@@ -135,12 +147,14 @@ export const useVaultItemsStore = defineStore('vaultItems', () => {
     items.value = []
     decryptedItems.value.clear()
     searchQuery.value = ''
+    selectedCategoryId.value = null
   }
 
   return {
     items,
     isLoading,
     searchQuery,
+    selectedCategoryId,
     filteredItems,
     favoriteItems,
     loadItems,
@@ -149,6 +163,7 @@ export const useVaultItemsStore = defineStore('vaultItems', () => {
     updateItem,
     deleteItem,
     toggleFavorite,
+    setFilter,
     reset,
   }
 })

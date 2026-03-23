@@ -8,11 +8,13 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: {
-          50: '#eff6ff',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
+        brand: {
+          50:  '#eef2ff',
+          100: '#e0e7ff',
+          500: '#4361ee',
+          600: '#3a56e8',
+          700: '#2d44c7',
+          900: '#1e2d6b',
         },
       },
     },

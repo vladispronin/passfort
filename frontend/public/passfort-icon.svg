@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1d4ed8"/>
+      <stop offset="100%" stop-color="#60a5fa"/>
+    </linearGradient>
+  </defs>
+  <!-- 3 мерлона (зубцы форта) -->
+  <rect x="2"    y="3" width="7"   height="9" rx="1.5" fill="url(#g)"/>
+  <rect x="12.5" y="3" width="7"   height="9" rx="1.5" fill="url(#g)"/>
+  <rect x="23"   y="3" width="7"   height="9" rx="1.5" fill="url(#g)"/>
+  <!-- Основная стена -->
+  <rect x="2" y="10" width="28" height="19" rx="2" fill="url(#g)"/>
+  <!-- Дужка замка -->
+  <path d="M13.5 17v-2.5a2.5 2.5 0 0 1 5 0V17"
+        stroke="white" stroke-width="2" stroke-linecap="round" fill="none"/>
+  <!-- Корпус замка -->
+  <rect x="12" y="17" width="8" height="7" rx="1.5" fill="white" opacity="0.95"/>
+  <!-- Замочная скважина -->
+  <circle cx="16" cy="20.5" r="1.2" fill="#3b82f6"/>
+</svg>
