@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
+import ChangeMasterPasswordForm from '../../components/user/ChangeMasterPasswordForm.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -30,6 +31,12 @@ const authStore = useAuthStore()
             PassFort servers never see your unencrypted data.
           </p>
         </div>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 mt-4">
+        <h3 class="text-base font-semibold text-slate-800 mb-4">Безопасность</h3>
+        <h4 class="text-sm font-medium text-slate-700 mb-3">Смена мастер-пароля</h4>
+        <ChangeMasterPasswordForm />
       </div>
     </main>
   </div>

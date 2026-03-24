@@ -8,6 +8,7 @@ use App\Entity\RefreshToken;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use Symfony\Bridge\Doctrine\Types\UuidType;
 
 class RefreshTokenRepository extends ServiceEntityRepository
 {
@@ -36,7 +37,7 @@ class RefreshTokenRepository extends ServiceEntityRepository
         $this->createQueryBuilder('rt')
             ->delete()
             ->where('rt.user = :user')
-            ->setParameter('user', $user)
+            ->setParameter('user', $user->getId(), UuidType::NAME)
             ->getQuery()
             ->execute();
     }
