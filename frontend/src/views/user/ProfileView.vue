@@ -2,6 +2,7 @@
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import ChangeMasterPasswordForm from '../../components/user/ChangeMasterPasswordForm.vue'
+import TwoFactorSettings from '../../components/user/TwoFactorSettings.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -35,8 +36,16 @@ const authStore = useAuthStore()
 
       <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 mt-4">
         <h3 class="text-base font-semibold text-slate-800 mb-4">Безопасность</h3>
-        <h4 class="text-sm font-medium text-slate-700 mb-3">Смена мастер-пароля</h4>
-        <ChangeMasterPasswordForm />
+
+        <div class="mb-6">
+          <h4 class="text-sm font-medium text-slate-700 mb-3">Двухфакторная аутентификация</h4>
+          <TwoFactorSettings />
+        </div>
+
+        <div class="border-t border-slate-100 pt-6">
+          <h4 class="text-sm font-medium text-slate-700 mb-3">Смена мастер-пароля</h4>
+          <ChangeMasterPasswordForm />
+        </div>
       </div>
     </main>
   </div>

@@ -23,6 +23,8 @@ class AuthService
         private readonly TokenService $tokenService,
         private readonly RefreshTokenService $refreshTokenService,
         private readonly VaultService $vaultService,
+        private readonly TotpService $totpService,
+        private readonly TempTokenService $tempTokenService,
     ) {}
 
     public function register(RegisterDTO $dto): User
@@ -63,6 +65,51 @@ class AuthService
             throw new AuthenticationException('Invalid credentials');
         }
 
+        // Если 2FA включён — возвращаем temp_token вместо JWT
+        if ($user->is2faEnabled()) {
+            $tempToken = $this->tempTokenService->createTempToken($user);
+            return [
+                'requires_2fa' => true,
+                'temp_token' => $tempToken,
+            ];
+        }
+
+        return $this->buildTokenResponse($user, $request);
+    }
+
+    /**
+     * Второй шаг логина с 2FA: верификация TOTP кода через temp_token.
+     */
+    public function loginWithTotp(string $tempToken, string $code, Request $request): array
+    {
+        // Читаем userId БЕЗ удаления токена — чтобы разрешить повторные попытки при неверном коде
+        $userId = $this->tempTokenService->getUserIdByTempToken($tempToken);
+        if ($userId === null) {
+            throw new AuthenticationException('Invalid or expired 2FA session');
+        }
+
+        $user = $this->userRepository->find($userId);
+        if ($user === null || !$user->isActive()) {
+            throw new AuthenticationException('Invalid credentials');
+        }
+
+        // Проверяем TOTP код или backup-код
+        if (!$this->totpService->verifyCode($user, $code) && !$this->totpService->verifyBackupCode($user, $code)) {
+            // Токен НЕ удаляем — пользователь может попробовать снова (пока TTL не истёк)
+            throw new AuthenticationException('Invalid 2FA code');
+        }
+
+        // Код верный — инвалидируем токен (защита от replay атак)
+        $this->tempTokenService->invalidateTempToken($tempToken);
+
+        // Если использовался backup-код — нужно сохранить изменения в entity
+        $this->em->flush();
+
+        return $this->buildTokenResponse($user, $request);
+    }
+
+    private function buildTokenResponse(User $user, Request $request): array
+    {
         $accessToken = $this->tokenService->createAccessToken($user);
         $refreshToken = $this->refreshTokenService->createRefreshToken($user, $request);
 

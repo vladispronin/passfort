@@ -38,4 +38,32 @@ export interface UserProfile {
   kdfParams: KdfParams
   salt: string
   createdAt: string
+  is2faEnabled: boolean
+}
+
+export interface LoginRequires2FA {
+  requires_2fa: true
+  temp_token: string
+}
+
+export type LoginResponse = AuthTokens | LoginRequires2FA
+
+export interface TwoFactorVerifyPayload {
+  tempToken: string
+  code: string
+}
+
+export interface TwoFactorSetupData {
+  secret: string
+  qr_uri: string
+}
+
+export interface BackupCodesResponse {
+  backup_codes: string[]
+}
+
+export interface TwoFactorStatus {
+  is_enabled: boolean
+  has_backup_codes: boolean
+  backup_codes_count: number
 }

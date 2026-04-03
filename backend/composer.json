@@ -20,6 +20,7 @@
         "koco/messenger-kafka": "^0.18.0",
         "lexik/jwt-authentication-bundle": "^2.20",
         "nelmio/cors-bundle": "^2.4",
+        "spomky-labs/otphp": "^11.4",
         "symfony/asset": "7.1.*",
         "symfony/console": "7.1.*",
         "symfony/doctrine-messenger": "7.1.*",

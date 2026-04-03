@@ -50,12 +50,22 @@ const router = createRouter({
       component: () => import('../views/user/ProfileView.vue'),
       meta: { requiresAuth: true, requiresUnlock: true },
     },
+    {
+      path: '/two-factor',
+      name: 'two-factor',
+      component: () => import('../views/auth/TwoFactorView.vue'),
+    },
   ],
 })
 
 router.beforeEach((to, _from) => {
   const authStore = useAuthStore()
   authStore.initFromStorage()
+
+  // Страница 2FA доступна только при наличии pending сессии
+  if (to.name === 'two-factor' && !authStore.requiresTwoFactor) {
+    return { name: 'login' }
+  }
 
   if (to.meta.requiresGuest && authStore.isAuthenticated) {
     if (authStore.isUnlocked) {

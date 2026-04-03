@@ -6,6 +6,7 @@ namespace App\Controller;
 
 use App\DTO\Auth\LoginDTO;
 use App\DTO\Auth\RegisterDTO;
+use App\DTO\Auth\TwoFactorVerifyDTO;
 use App\Service\Auth\AuthService;
 use App\Service\Auth\RefreshTokenService;
 use App\Service\Auth\TokenService;
@@ -82,13 +83,44 @@ class AuthController extends AbstractController
         }
 
         try {
-            $tokens = $this->authService->login($dto, $request);
-            $this->securityLogService->log('user.login', null, $request, ['email' => $dto->email]);
+            $result = $this->authService->login($dto, $request);
 
-            return $this->successResponse($tokens);
+            if (isset($result['requires_2fa'])) {
+                $this->securityLogService->log('user.login.2fa_required', null, $request, ['email' => $dto->email]);
+                return $this->successResponse([
+                    'requires_2fa' => true,
+                    'temp_token' => $result['temp_token'],
+                ]);
+            }
+
+            $this->securityLogService->log('user.login', null, $request, ['email' => $dto->email]);
+            return $this->successResponse($result);
         } catch (AuthenticationException) {
             $this->securityLogService->log('user.login.failed', null, $request, ['email' => $dto->email]);
             return $this->errorResponse('Invalid credentials', 401);
+        }
+    }
+
+    #[Route('/2fa/verify', methods: ['POST'])]
+    public function verifyTwoFactor(
+        #[MapRequestPayload] TwoFactorVerifyDTO $dto,
+        Request $request,
+        RateLimiterFactory $auth2faVerifyLimiter,
+    ): JsonResponse {
+        if ($this->rateLimiterEnabled) {
+            $limiter = $auth2faVerifyLimiter->create($request->getClientIp());
+            if (!$limiter->consume()->isAccepted()) {
+                return $this->errorResponse('Too many requests', 429);
+            }
+        }
+
+        try {
+            $tokens = $this->authService->loginWithTotp($dto->tempToken, $dto->code, $request);
+            $this->securityLogService->log('user.login.2fa_success', null, $request);
+            return $this->successResponse($tokens);
+        } catch (AuthenticationException) {
+            $this->securityLogService->log('user.login.2fa_failed', null, $request);
+            return $this->errorResponse('Invalid 2FA code or expired session', 401);
         }
     }
 
