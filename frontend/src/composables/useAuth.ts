@@ -2,9 +2,11 @@ import { useAuthStore } from '../stores/auth'
 import { useVaultStore } from '../stores/vault'
 import { useVaultItemsStore } from '../stores/vaultItems'
 import { authApi } from '../api/auth'
+import { twoFactorApi } from '../api/twoFactor'
 import { deriveEncryptionKey, deriveVerifyHash, generateSalt } from '../crypto'
 import { useUiStore } from '../stores/ui'
 import { useRouter } from 'vue-router'
+import type { AuthTokens } from '../types/auth'
 
 export function useAuth() {
   const authStore = useAuthStore()
@@ -34,6 +36,21 @@ export function useAuth() {
     await router.push('/login')
   }
 
+  async function completeLogin(tokens: AuthTokens, masterPassword: string, salt: string): Promise<void> {
+    authStore.setTokens(tokens.access_token, tokens.refresh_token)
+
+    const masterPasswordHash = await deriveVerifyHash(masterPassword, salt)
+    authStore.setMasterPasswordHash(masterPasswordHash)
+
+    const profile = await authApi.getMe()
+    authStore.setUser(profile)
+
+    const encKey = await deriveEncryptionKey(masterPassword, salt)
+    authStore.setEncryptionKey(encKey, salt)
+
+    await router.push('/vault')
+  }
+
   async function login(email: string, masterPassword: string): Promise<void> {
     // Получаем параметры KDF
     const kdfParams = await authApi.getKdfParams(email)
@@ -42,21 +59,39 @@ export function useAuth() {
     const masterPasswordHash = await deriveVerifyHash(masterPassword, kdfParams.salt)
 
     // Логинимся
-    const tokens = await authApi.login({ email, masterPasswordHash })
-    authStore.setTokens(tokens.access_token, tokens.refresh_token)
+    const result = await authApi.login({ email, masterPasswordHash })
 
-    // Сохраняем хэш для верификации при последующей разблокировке
-    authStore.setMasterPasswordHash(masterPasswordHash)
+    // Если требуется 2FA — перенаправляем на страницу ввода кода
+    if ('requires_2fa' in result && result.requires_2fa) {
+      authStore.setPendingTwoFactor({
+        tempToken: result.temp_token,
+        email,
+        masterPasswordHash,
+        masterPassword,
+      })
+      await router.push('/two-factor')
+      return
+    }
 
-    // Загружаем профиль
-    const profile = await authApi.getMe()
-    authStore.setUser(profile)
+    await completeLogin(result as AuthTokens, masterPassword, kdfParams.salt)
+  }
 
-    // Деривируем ключ шифрования (остаётся только в памяти!)
-    const encKey = await deriveEncryptionKey(masterPassword, kdfParams.salt)
-    authStore.setEncryptionKey(encKey, kdfParams.salt)
+  async function verifyTwoFactor(code: string): Promise<void> {
+    const pending = authStore.pendingTwoFactor
+    if (!pending) {
+      throw new Error('No pending 2FA session')
+    }
 
-    await router.push('/vault')
+    const tokens = await twoFactorApi.verifyLogin({
+      tempToken: pending.tempToken,
+      code,
+    })
+
+    authStore.clearPendingTwoFactor()
+
+    // Получаем salt для деривации ключа шифрования
+    const kdfParams = await authApi.getKdfParams(pending.email)
+    await completeLogin(tokens, pending.masterPassword, kdfParams.salt)
   }
 
   async function unlock(masterPassword: string): Promise<void> {
@@ -103,5 +138,5 @@ export function useAuth() {
     await router.push('/login')
   }
 
-  return { register, login, unlock, logout }
+  return { register, login, unlock, logout, verifyTwoFactor }
 }

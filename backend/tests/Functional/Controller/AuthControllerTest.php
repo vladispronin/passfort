@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Controller;
 
+use App\Service\Auth\TotpService;
 use App\Tests\Functional\ApiTestCase;
+use OTPHP\TOTP;
 
 class AuthControllerTest extends ApiTestCase
 {
@@ -144,5 +146,149 @@ class AuthControllerTest extends ApiTestCase
         ]);
 
         $this->assertEquals(401, $this->getStatusCode());
+    }
+
+    public function testLoginWithout2faStillWorksRegression(): void
+    {
+        // Регрессионный тест: логин без 2FA должен возвращать токены
+        $this->createTestUser('regression@example.com', $this->validMasterPasswordHash);
+
+        $response = $this->jsonRequest('POST', '/api/v1/auth/login', [
+            'email' => 'regression@example.com',
+            'masterPasswordHash' => $this->validMasterPasswordHash,
+        ]);
+
+        $this->assertEquals(200, $this->getStatusCode());
+        $this->assertArrayHasKey('access_token', $response['data']);
+        $this->assertArrayNotHasKey('requires_2fa', $response['data']);
+    }
+
+    public function testLoginReturns2faRequiredWhenEnabled(): void
+    {
+        $user = $this->createTestUser('2fa@example.com', $this->validMasterPasswordHash);
+        $token = $this->getJwtToken($user);
+
+        // Включаем 2FA
+        $totpService = static::getContainer()->get(TotpService::class);
+        $setupData = $totpService->generateSetupData($user);
+        $totp = TOTP::createFromSecret($setupData['secret']);
+        $totpService->verifyAndEnable($user, $totp->now());
+        $this->em->flush();
+
+        $response = $this->jsonRequest('POST', '/api/v1/auth/login', [
+            'email' => '2fa@example.com',
+            'masterPasswordHash' => $this->validMasterPasswordHash,
+        ]);
+
+        $this->assertEquals(200, $this->getStatusCode());
+        $this->assertTrue($response['data']['requires_2fa']);
+        $this->assertArrayHasKey('temp_token', $response['data']);
+        $this->assertArrayNotHasKey('access_token', $response['data']);
+    }
+
+    public function testTwoFactorVerifyWithInvalidTempToken(): void
+    {
+        $response = $this->jsonRequest('POST', '/api/v1/auth/2fa/verify', [
+            'tempToken' => str_repeat('a', 64),
+            'code' => '123456',
+        ]);
+
+        $this->assertEquals(401, $this->getStatusCode());
+    }
+
+    public function testTwoFactorVerifyWithValidCode(): void
+    {
+        $user = $this->createTestUser('2faverify@example.com', $this->validMasterPasswordHash);
+
+        // Включаем 2FA
+        $totpService = static::getContainer()->get(TotpService::class);
+        $setupData = $totpService->generateSetupData($user);
+        $totp = TOTP::createFromSecret($setupData['secret']);
+        $totpService->verifyAndEnable($user, $totp->now());
+        $this->em->flush();
+
+        // Логинимся — получаем temp_token
+        $loginResponse = $this->jsonRequest('POST', '/api/v1/auth/login', [
+            'email' => '2faverify@example.com',
+            'masterPasswordHash' => $this->validMasterPasswordHash,
+        ]);
+        $tempToken = $loginResponse['data']['temp_token'];
+
+        // Верифицируем 2FA код
+        $response = $this->jsonRequest('POST', '/api/v1/auth/2fa/verify', [
+            'tempToken' => $tempToken,
+            'code' => $totp->now(),
+        ]);
+
+        $this->assertEquals(200, $this->getStatusCode());
+        $this->assertArrayHasKey('access_token', $response['data']);
+        $this->assertArrayHasKey('refresh_token', $response['data']);
+        $this->assertEquals('Bearer', $response['data']['token_type']);
+    }
+
+    public function testTwoFactorVerifyWithInvalidCode(): void
+    {
+        $user = $this->createTestUser('2fafail@example.com', $this->validMasterPasswordHash);
+
+        // Включаем 2FA
+        $totpService = static::getContainer()->get(TotpService::class);
+        $setupData = $totpService->generateSetupData($user);
+        $totp = TOTP::createFromSecret($setupData['secret']);
+        $totpService->verifyAndEnable($user, $totp->now());
+        $this->em->flush();
+
+        // Логинимся — получаем temp_token
+        $loginResponse = $this->jsonRequest('POST', '/api/v1/auth/login', [
+            'email' => '2fafail@example.com',
+            'masterPasswordHash' => $this->validMasterPasswordHash,
+        ]);
+        $tempToken = $loginResponse['data']['temp_token'];
+
+        // Неверный код
+        $response = $this->jsonRequest('POST', '/api/v1/auth/2fa/verify', [
+            'tempToken' => $tempToken,
+            'code' => '000000',
+        ]);
+
+        $this->assertEquals(401, $this->getStatusCode());
+    }
+
+    public function testTwoFactorVerifyWithBackupCode(): void
+    {
+        $user = $this->createTestUser('2fabackup@example.com', $this->validMasterPasswordHash);
+        $token = $this->getJwtToken($user);
+
+        // Включаем 2FA и получаем backup-коды
+        $setupResponse = $this->jsonRequest('GET', '/api/v1/2fa/setup', [], $token);
+        $secret = $setupResponse['data']['secret'];
+        $totp = TOTP::createFromSecret($secret);
+        $enableResponse = $this->jsonRequest('POST', '/api/v1/2fa/enable', ['code' => $totp->now()], $token);
+        $backupCode = $enableResponse['data']['backup_codes'][0];
+
+        // Логинимся — получаем temp_token
+        $loginResponse = $this->jsonRequest('POST', '/api/v1/auth/login', [
+            'email' => '2fabackup@example.com',
+            'masterPasswordHash' => $this->validMasterPasswordHash,
+        ]);
+        $tempToken = $loginResponse['data']['temp_token'];
+
+        // Верифицируем backup-кодом
+        $response = $this->jsonRequest('POST', '/api/v1/auth/2fa/verify', [
+            'tempToken' => $tempToken,
+            'code' => $backupCode,
+        ]);
+
+        $this->assertEquals(200, $this->getStatusCode());
+        $this->assertArrayHasKey('access_token', $response['data']);
+    }
+
+    public function testTwoFactorVerifyValidationError(): void
+    {
+        $response = $this->jsonRequest('POST', '/api/v1/auth/2fa/verify', [
+            'tempToken' => 'short',
+            'code' => '1',
+        ]);
+
+        $this->assertEquals(422, $this->getStatusCode());
     }
 }

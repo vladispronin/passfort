@@ -46,6 +46,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: Types::BOOLEAN)]
     private bool $isActive = true;
 
+    #[ORM\Column(name: 'is_2fa_enabled', type: Types::BOOLEAN)]
+    private bool $is2faEnabled = false;
+
+    #[ORM\Column(name: 'totp_secret', length: 255, nullable: true)]
+    private ?string $totpSecret = null;
+
+    #[ORM\Column(name: 'backup_codes', type: Types::JSON, nullable: true)]
+    private ?array $backupCodes = null;
+
+    #[ORM\Column(name: 'totp_setup_data', type: Types::JSON, nullable: true)]
+    private ?array $totpSetupData = null;
+
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
@@ -186,5 +198,49 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function eraseCredentials(): void
     {
+    }
+
+    public function is2faEnabled(): bool
+    {
+        return $this->is2faEnabled;
+    }
+
+    public function setIs2faEnabled(bool $is2faEnabled): self
+    {
+        $this->is2faEnabled = $is2faEnabled;
+        return $this;
+    }
+
+    public function getTotpSecret(): ?string
+    {
+        return $this->totpSecret;
+    }
+
+    public function setTotpSecret(?string $totpSecret): self
+    {
+        $this->totpSecret = $totpSecret;
+        return $this;
+    }
+
+    public function getBackupCodes(): ?array
+    {
+        return $this->backupCodes;
+    }
+
+    public function setBackupCodes(?array $backupCodes): self
+    {
+        $this->backupCodes = $backupCodes;
+        return $this;
+    }
+
+    public function getTotpSetupData(): ?array
+    {
+        return $this->totpSetupData;
+    }
+
+    public function setTotpSetupData(?array $totpSetupData): self
+    {
+        $this->totpSetupData = $totpSetupData;
+        return $this;
     }
 }

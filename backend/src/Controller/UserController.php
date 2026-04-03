@@ -48,6 +48,7 @@ class UserController extends AbstractController
             'kdfParams' => $user->getKdfParams(),
             'salt' => $user->getSalt(),
             'createdAt' => $user->getCreatedAt()->format(\DateTimeInterface::ATOM),
+            'is2faEnabled' => $user->is2faEnabled(),
         ]);
     }
 

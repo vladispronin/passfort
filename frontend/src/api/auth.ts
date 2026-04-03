@@ -1,5 +1,12 @@
 import { apiClient } from './client'
-import type { RegisterPayload, LoginPayload, AuthTokens, KdfParamsResponse, UserProfile } from '../types/auth'
+import type {
+  RegisterPayload,
+  LoginPayload,
+  LoginResponse,
+  AuthTokens,
+  KdfParamsResponse,
+  UserProfile,
+} from '../types/auth'
 import type { ApiResponse } from '../types/api'
 
 export const authApi = {
@@ -18,8 +25,8 @@ export const authApi = {
     return data.data
   },
 
-  async login(payload: LoginPayload): Promise<AuthTokens> {
-    const { data } = await apiClient.post<ApiResponse<AuthTokens>>('/auth/login', payload)
+  async login(payload: LoginPayload): Promise<LoginResponse> {
+    const { data } = await apiClient.post<ApiResponse<LoginResponse>>('/auth/login', payload)
     return data.data
   },
 
