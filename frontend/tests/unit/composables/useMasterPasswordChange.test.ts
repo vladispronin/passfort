@@ -58,6 +58,7 @@ const fakeProfile = {
   salt: 'newSalt',
   kdfParams: { algorithm: 'PBKDF2', iterations: 600000, hash: 'SHA-256', keyLength: 256 },
   createdAt: '',
+  is2faEnabled: false,
 }
 
 describe('useMasterPasswordChange', () => {

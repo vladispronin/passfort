@@ -73,7 +73,7 @@ export function useAuth() {
       return
     }
 
-    await completeLogin(result, masterPassword, kdfParams.salt)
+    await completeLogin(result as AuthTokens, masterPassword, kdfParams.salt)
   }
 
   async function verifyTwoFactor(code: string): Promise<void> {

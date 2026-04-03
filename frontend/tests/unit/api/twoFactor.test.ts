@@ -12,7 +12,7 @@ vi.mock('../../../src/api/client', () => ({
 import { apiClient } from '../../../src/api/client'
 import { twoFactorApi } from '../../../src/api/twoFactor'
 
-const mockApiClient = apiClient as {
+const mockApiClient = apiClient as unknown as {
   get: ReturnType<typeof vi.fn>
   post: ReturnType<typeof vi.fn>
   delete: ReturnType<typeof vi.fn>
