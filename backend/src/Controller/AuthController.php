@@ -7,7 +7,10 @@ namespace App\Controller;
 use App\DTO\Auth\LoginDTO;
 use App\DTO\Auth\RegisterDTO;
 use App\DTO\Auth\TwoFactorVerifyDTO;
+use App\Exception\EmailNotVerifiedException;
+use App\Exception\EmailVerificationException;
 use App\Service\Auth\AuthService;
+use App\Service\Auth\EmailVerificationService;
 use App\Service\Auth\RefreshTokenService;
 use App\Service\Auth\TokenService;
 use App\Service\Security\SecurityLogService;
@@ -31,6 +34,7 @@ class AuthController extends AbstractController
         private readonly RefreshTokenService $refreshTokenService,
         private readonly TokenService $tokenService,
         private readonly SecurityLogService $securityLogService,
+        private readonly EmailVerificationService $emailVerificationService,
         #[Autowire(env: 'bool:RATE_LIMITER_ENABLED')]
         private readonly bool $rateLimiterEnabled = true,
     ) {}
@@ -95,6 +99,9 @@ class AuthController extends AbstractController
 
             $this->securityLogService->log('user.login', null, $request, ['email' => $dto->email]);
             return $this->successResponse($result);
+        } catch (EmailNotVerifiedException) {
+            $this->securityLogService->log('user.login.email_not_verified', null, $request, ['email' => $dto->email]);
+            return $this->errorResponse('Please verify your email address before logging in', 403, 'EMAIL_NOT_VERIFIED');
         } catch (AuthenticationException) {
             $this->securityLogService->log('user.login.failed', null, $request, ['email' => $dto->email]);
             return $this->errorResponse('Invalid credentials', 401);
@@ -122,6 +129,51 @@ class AuthController extends AbstractController
             $this->securityLogService->log('user.login.2fa_failed', null, $request);
             return $this->errorResponse('Invalid 2FA code or expired session', 401);
         }
+    }
+
+    #[Route('/verify-email', methods: ['GET'])]
+    public function verifyEmail(Request $request): JsonResponse
+    {
+        $rawToken = $request->query->get('token', '');
+
+        if ($rawToken === '') {
+            return $this->errorResponse('Token is required', 400);
+        }
+
+        try {
+            $user = $this->emailVerificationService->verifyToken($rawToken);
+            $this->securityLogService->log('user.email_verified', $user, $request);
+            return $this->successResponse(['message' => 'Email verified successfully']);
+        } catch (EmailVerificationException $e) {
+            return $this->errorResponse($e->getMessage(), 400, 'EMAIL_VERIFICATION_FAILED');
+        }
+    }
+
+    #[Route('/resend-verification', methods: ['POST'])]
+    public function resendVerification(
+        Request $request,
+        RateLimiterFactory $authResendVerificationLimiter,
+    ): JsonResponse {
+        if ($this->rateLimiterEnabled) {
+            $limiter = $authResendVerificationLimiter->create($request->getClientIp());
+            if (!$limiter->consume()->isAccepted()) {
+                return $this->errorResponse('Too many requests', 429);
+            }
+        }
+
+        $data = json_decode($request->getContent(), true) ?? [];
+        $email = $data['email'] ?? '';
+
+        if ($email === '') {
+            return $this->errorResponse('Email is required', 400);
+        }
+
+        $this->emailVerificationService->resendVerification($email);
+        $this->securityLogService->log('user.resend_verification', null, $request, ['email' => $email]);
+
+        return $this->successResponse([
+            'message' => 'If this email is registered and unverified, a verification email has been sent',
+        ]);
     }
 
     #[Route('/logout', methods: ['POST'])]

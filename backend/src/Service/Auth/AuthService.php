@@ -7,6 +7,7 @@ namespace App\Service\Auth;
 use App\DTO\Auth\LoginDTO;
 use App\DTO\Auth\RegisterDTO;
 use App\Entity\User;
+use App\Exception\EmailNotVerifiedException;
 use App\Repository\UserRepository;
 use App\Service\Vault\VaultService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -25,6 +26,7 @@ class AuthService
         private readonly VaultService $vaultService,
         private readonly TotpService $totpService,
         private readonly TempTokenService $tempTokenService,
+        private readonly EmailVerificationService $emailVerificationService,
     ) {}
 
     public function register(RegisterDTO $dto): User
@@ -49,6 +51,9 @@ class AuthService
         // Создаём дефолтное хранилище
         $this->vaultService->createDefaultVault($user);
 
+        // Отправляем письмо для верификации email
+        $this->emailVerificationService->sendVerificationEmail($user);
+
         return $user;
     }
 
@@ -58,6 +63,10 @@ class AuthService
 
         if ($user === null || !$user->isActive()) {
             throw new AuthenticationException('Invalid credentials');
+        }
+
+        if (!$user->isEmailVerified()) {
+            throw new EmailNotVerifiedException('Email address not verified');
         }
 
         // Верификация master password hash

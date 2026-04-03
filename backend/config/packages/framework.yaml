@@ -34,6 +34,10 @@ framework:
             policy: sliding_window
             limit: 5
             interval: '15 minutes'
+        auth_resend_verification:
+            policy: sliding_window
+            limit: 3
+            interval: '1 hour'
 
 when@test:
     framework:
