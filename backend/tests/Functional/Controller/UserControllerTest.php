@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Controller;
 
+use App\Entity\RefreshToken;
+use App\Service\Auth\RefreshTokenService;
 use App\Tests\Functional\ApiTestCase;
+use Symfony\Component\HttpFoundation\Request;
 
 class UserControllerTest extends ApiTestCase
 {
@@ -252,6 +255,119 @@ class UserControllerTest extends ApiTestCase
         $this->jsonRequest('POST', '/api/v1/user/master-password', $payload, $token);
 
         $this->assertEquals(403, $this->getStatusCode());
+    }
+
+    // -------------------------------------------------------------------------
+    // GET /api/v1/user/sessions
+    // -------------------------------------------------------------------------
+
+    public function testGetSessionsRequiresAuth(): void
+    {
+        $this->jsonRequest('GET', '/api/v1/user/sessions');
+        $this->assertEquals(401, $this->getStatusCode());
+    }
+
+    public function testGetSessionsReturnsActiveSessions(): void
+    {
+        $user = $this->createTestUser('sessions_list@example.com', $this->masterPasswordHash);
+        $token = $this->getJwtToken($user);
+
+        // Создаём refresh-токен через сервис (имитация логина)
+        $refreshTokenService = static::getContainer()->get(RefreshTokenService::class);
+        $refreshTokenService->createRefreshToken($user, Request::create('/'));
+
+        $response = $this->jsonRequest('GET', '/api/v1/user/sessions', [], $token);
+
+        $this->assertEquals(200, $this->getStatusCode());
+        $this->assertArrayHasKey('data', $response);
+        $this->assertCount(1, $response['data']);
+        $session = $response['data'][0];
+        $this->assertArrayHasKey('id', $session);
+        $this->assertArrayHasKey('ipAddress', $session);
+        $this->assertArrayHasKey('deviceInfo', $session);
+        $this->assertArrayHasKey('createdAt', $session);
+        $this->assertArrayHasKey('expiresAt', $session);
+        $this->assertArrayHasKey('isCurrent', $session);
+    }
+
+    public function testGetSessionsExcludesExpiredTokens(): void
+    {
+        $user = $this->createTestUser('sessions_expired@example.com', $this->masterPasswordHash);
+        $token = $this->getJwtToken($user);
+
+        // Создаём истёкший refresh-токен напрямую через EM
+        $expiredToken = new RefreshToken();
+        $expiredToken->setUser($user);
+        $expiredToken->setTokenHash(hash('sha256', 'expired_token_value'));
+        $expiredToken->setExpiresAt(new \DateTimeImmutable('-1 day'));
+        $this->em->persist($expiredToken);
+        $this->em->flush();
+
+        $response = $this->jsonRequest('GET', '/api/v1/user/sessions', [], $token);
+
+        $this->assertEquals(200, $this->getStatusCode());
+        $this->assertCount(0, $response['data']);
+    }
+
+    // -------------------------------------------------------------------------
+    // DELETE /api/v1/user/sessions/{id}
+    // -------------------------------------------------------------------------
+
+    public function testDeleteSessionRequiresAuth(): void
+    {
+        $this->jsonRequest('DELETE', '/api/v1/user/sessions/some-id');
+        $this->assertEquals(401, $this->getStatusCode());
+    }
+
+    public function testDeleteSessionSuccess(): void
+    {
+        $user = $this->createTestUser('sessions_delete@example.com', $this->masterPasswordHash);
+        $token = $this->getJwtToken($user);
+
+        $refreshTokenService = static::getContainer()->get(RefreshTokenService::class);
+        $refreshTokenService->createRefreshToken($user, Request::create('/'));
+
+        // Получаем ID созданного токена из БД
+        $refreshToken = $this->em->getRepository(RefreshToken::class)->findOneBy(['user' => $user]);
+        $sessionId = $refreshToken->getId()->toRfc4122();
+
+        $this->jsonRequest('DELETE', "/api/v1/user/sessions/{$sessionId}", [], $token);
+
+        $this->assertEquals(204, $this->getStatusCode());
+
+        // Токен должен быть удалён из БД
+        $this->em->clear();
+        $count = (int) $this->em->getConnection()->fetchOne('SELECT COUNT(*) FROM refresh_tokens');
+        $this->assertEquals(0, $count);
+    }
+
+    public function testDeleteSessionNotFound(): void
+    {
+        $user = $this->createTestUser('sessions_notfound@example.com', $this->masterPasswordHash);
+        $token = $this->getJwtToken($user);
+
+        $this->jsonRequest('DELETE', '/api/v1/user/sessions/00000000-0000-0000-0000-000000000000', [], $token);
+
+        $this->assertEquals(404, $this->getStatusCode());
+    }
+
+    public function testDeleteSessionBelongsToOtherUser(): void
+    {
+        $user1 = $this->createTestUser('sessions_owner@example.com', $this->masterPasswordHash);
+        $user2 = $this->createTestUser('sessions_attacker@example.com', $this->masterPasswordHash);
+        $token2 = $this->getJwtToken($user2);
+
+        // Создаём сессию для user1
+        $refreshTokenService = static::getContainer()->get(RefreshTokenService::class);
+        $refreshTokenService->createRefreshToken($user1, Request::create('/'));
+
+        $foreignToken = $this->em->getRepository(RefreshToken::class)->findOneBy(['user' => $user1]);
+        $foreignSessionId = $foreignToken->getId()->toRfc4122();
+
+        // user2 пытается удалить сессию user1 — должен получить 404
+        $this->jsonRequest('DELETE', "/api/v1/user/sessions/{$foreignSessionId}", [], $token2);
+
+        $this->assertEquals(404, $this->getStatusCode());
     }
 
     public function testOldTokensInvalidatedAfterPasswordChange(): void

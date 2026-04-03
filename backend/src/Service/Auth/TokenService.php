@@ -13,8 +13,11 @@ class TokenService
         private readonly JWTTokenManagerInterface $jwtManager,
     ) {}
 
-    public function createAccessToken(User $user): string
+    public function createAccessToken(User $user, ?string $sessionId = null): string
     {
+        if ($sessionId !== null) {
+            return $this->jwtManager->createFromPayload($user, ['session_id' => $sessionId]);
+        }
         return $this->jwtManager->create($user);
     }
 

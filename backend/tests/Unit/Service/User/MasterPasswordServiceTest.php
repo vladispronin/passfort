@@ -112,7 +112,7 @@ class MasterPasswordServiceTest extends TestCase
             ->willReturn('access_token_value');
         $this->refreshTokenService->expects($this->once())
             ->method('createRefreshToken')
-            ->willReturn('refresh_token_value');
+            ->willReturn(['rawToken' => 'refresh_token_value', 'sessionId' => 'test-session-uuid']);
 
         $itemDto = new ReEncryptedItemDTO();
         $itemDto->id = $uuid;
@@ -175,7 +175,7 @@ class MasterPasswordServiceTest extends TestCase
 
         $this->passwordHasher->method('hashPassword')->willReturn('hashed');
         $this->tokenService->method('createAccessToken')->willReturn('token');
-        $this->refreshTokenService->method('createRefreshToken')->willReturn('refresh');
+        $this->refreshTokenService->method('createRefreshToken')->willReturn(['rawToken' => 'refresh', 'sessionId' => 'test-session-uuid']);
 
         $result = $this->service->changeMasterPassword($user, $this->makeDto([]), new Request());
 
@@ -211,7 +211,7 @@ class MasterPasswordServiceTest extends TestCase
         $this->em->method('flush');
         $this->em->method('commit');
         $this->tokenService->method('createAccessToken')->willReturn('token');
-        $this->refreshTokenService->method('createRefreshToken')->willReturn('refresh');
+        $this->refreshTokenService->method('createRefreshToken')->willReturn(['rawToken' => 'refresh', 'sessionId' => 'test-session-uuid']);
 
         $this->refreshTokenService->expects($this->once())
             ->method('revokeAllUserTokens')
@@ -230,7 +230,7 @@ class MasterPasswordServiceTest extends TestCase
         $this->em->method('flush');
         $this->em->method('commit');
         $this->tokenService->method('createAccessToken')->willReturn('token');
-        $this->refreshTokenService->method('createRefreshToken')->willReturn('refresh');
+        $this->refreshTokenService->method('createRefreshToken')->willReturn(['rawToken' => 'refresh', 'sessionId' => 'test-session-uuid']);
 
         $this->securityLogService->expects($this->once())
             ->method('log')

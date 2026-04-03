@@ -99,9 +99,10 @@ class MasterPasswordService
         );
 
         // 6. Выдача новых токенов
+        $tokenData = $this->refreshTokenService->createRefreshToken($user, $request);
         return [
-            'access_token' => $this->tokenService->createAccessToken($user),
-            'refresh_token' => $this->refreshTokenService->createRefreshToken($user, $request),
+            'access_token' => $this->tokenService->createAccessToken($user, $tokenData['sessionId']),
+            'refresh_token' => $tokenData['rawToken'],
             'token_type' => 'Bearer',
             'expires_in' => 900,
         ];

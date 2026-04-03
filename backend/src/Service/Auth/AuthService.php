@@ -110,12 +110,12 @@ class AuthService
 
     private function buildTokenResponse(User $user, Request $request): array
     {
-        $accessToken = $this->tokenService->createAccessToken($user);
-        $refreshToken = $this->refreshTokenService->createRefreshToken($user, $request);
+        $tokenData = $this->refreshTokenService->createRefreshToken($user, $request);
+        $accessToken = $this->tokenService->createAccessToken($user, $tokenData['sessionId']);
 
         return [
             'access_token' => $accessToken,
-            'refresh_token' => $refreshToken,
+            'refresh_token' => $tokenData['rawToken'],
             'token_type' => 'Bearer',
             'expires_in' => 900,
         ];
