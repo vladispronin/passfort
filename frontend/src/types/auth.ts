@@ -67,3 +67,12 @@ export interface TwoFactorStatus {
   has_backup_codes: boolean
   backup_codes_count: number
 }
+
+export interface Session {
+  id: string
+  ipAddress: string | null
+  deviceInfo: string | null
+  createdAt: string
+  expiresAt: string
+  isCurrent: boolean
+}

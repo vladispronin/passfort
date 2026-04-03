@@ -8,19 +8,25 @@ use App\Entity\RefreshToken;
 use App\Entity\User;
 use App\Repository\RefreshTokenRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\HttpFoundation\Request;
 
 class RefreshTokenService
 {
     private const TTL_DAYS = 30;
+    private const SESSION_CACHE_PREFIX = 'session_valid_';
 
     public function __construct(
         private readonly RefreshTokenRepository $repository,
         private readonly EntityManagerInterface $em,
         private readonly TokenService $tokenService,
+        private readonly CacheItemPoolInterface $cache,
     ) {}
 
-    public function createRefreshToken(User $user, Request $request): string
+    /**
+     * @return array{rawToken: string, sessionId: string}
+     */
+    public function createRefreshToken(User $user, Request $request): array
     {
         $rawToken = $this->tokenService->generateRefreshToken();
         $tokenHash = $this->tokenService->hashRefreshToken($rawToken);
@@ -35,7 +41,10 @@ class RefreshTokenService
         $this->em->persist($refreshToken);
         $this->em->flush();
 
-        return $rawToken;
+        return [
+            'rawToken' => $rawToken,
+            'sessionId' => $refreshToken->getId()->toRfc4122(),
+        ];
     }
 
     public function rotateRefreshToken(string $rawToken, Request $request): ?array
@@ -53,14 +62,43 @@ class RefreshTokenService
         $this->em->remove($refreshToken);
 
         // Создаём новый
-        $newRawToken = $this->createRefreshToken($user, $request);
+        $result = $this->createRefreshToken($user, $request);
 
-        return ['user' => $user, 'refreshToken' => $newRawToken];
+        return [
+            'user' => $user,
+            'refreshToken' => $result['rawToken'],
+            'sessionId' => $result['sessionId'],
+        ];
     }
 
     public function revokeAllUserTokens(User $user): void
     {
         $this->repository->deleteByUser($user);
         $this->em->flush();
+    }
+
+    /**
+     * @return RefreshToken[]
+     */
+    public function getActiveSessions(User $user): array
+    {
+        return $this->repository->findActiveByUser($user);
+    }
+
+    public function revokeSessionById(string $sessionId, User $user): bool
+    {
+        $token = $this->repository->findByIdAndUser($sessionId, $user);
+
+        if ($token === null) {
+            return false;
+        }
+
+        $this->em->remove($token);
+        $this->em->flush();
+
+        // Инвалидируем кэш, чтобы браузер с этой сессией получил 401 немедленно
+        $this->cache->deleteItem(self::SESSION_CACHE_PREFIX . hash('sha256', $sessionId));
+
+        return true;
     }
 }

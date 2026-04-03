@@ -155,7 +155,7 @@ class AuthController extends AbstractController
             return $this->errorResponse('Invalid or expired refresh token', 401);
         }
 
-        $accessToken = $this->tokenService->createAccessToken($result['user']);
+        $accessToken = $this->tokenService->createAccessToken($result['user'], $result['sessionId']);
 
         return $this->successResponse([
             'access_token' => $accessToken,

@@ -41,4 +41,36 @@ class RefreshTokenRepository extends ServiceEntityRepository
             ->getQuery()
             ->execute();
     }
+
+    /**
+     * @return RefreshToken[]
+     */
+    public function findActiveByUser(User $user): array
+    {
+        return $this->createQueryBuilder('rt')
+            ->where('rt.user = :user')
+            ->andWhere('rt.expiresAt > :now')
+            ->setParameter('user', $user->getId(), UuidType::NAME)
+            ->setParameter('now', new \DateTimeImmutable())
+            ->orderBy('rt.createdAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function findByIdAndUser(string $id, User $user): ?RefreshToken
+    {
+        try {
+            $uuid = \Symfony\Component\Uid\Uuid::fromString($id);
+        } catch (\InvalidArgumentException) {
+            return null;
+        }
+
+        return $this->createQueryBuilder('rt')
+            ->where('rt.id = :id')
+            ->andWhere('rt.user = :user')
+            ->setParameter('id', $uuid, UuidType::NAME)
+            ->setParameter('user', $user->getId(), UuidType::NAME)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
 }

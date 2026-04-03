@@ -15,11 +15,15 @@ use Symfony\Component\Uid\Uuid;
 #[ORM\HasLifecycleCallbacks]
 class RefreshToken
 {
+    public function __construct()
+    {
+        $this->id = Uuid::v4();
+    }
+
     #[ORM\Id]
     #[ORM\Column(type: UuidType::NAME, unique: true)]
-    #[ORM\GeneratedValue(strategy: 'CUSTOM')]
-    #[ORM\CustomIdGenerator(class: 'doctrine.uuid_generator')]
-    private ?Uuid $id = null;
+    #[ORM\GeneratedValue(strategy: 'NONE')]
+    private Uuid $id;
 
     #[ORM\ManyToOne(targetEntity: User::class, inversedBy: 'refreshTokens')]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
@@ -46,7 +50,7 @@ class RefreshToken
         $this->createdAt = new \DateTimeImmutable();
     }
 
-    public function getId(): ?Uuid
+    public function getId(): Uuid
     {
         return $this->id;
     }

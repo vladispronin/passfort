@@ -12,6 +12,8 @@ use App\Service\Auth\TokenService;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
+use Psr\Cache\CacheItemInterface;
+use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Component\HttpFoundation\Request;
 
 class RefreshTokenServiceTest extends TestCase
@@ -20,13 +22,15 @@ class RefreshTokenServiceTest extends TestCase
     private RefreshTokenRepository&MockObject $repository;
     private EntityManagerInterface&MockObject $em;
     private TokenService&MockObject $tokenService;
+    private CacheItemPoolInterface&MockObject $cache;
 
     protected function setUp(): void
     {
         $this->repository = $this->createMock(RefreshTokenRepository::class);
         $this->em = $this->createMock(EntityManagerInterface::class);
         $this->tokenService = $this->createMock(TokenService::class);
-        $this->service = new RefreshTokenService($this->repository, $this->em, $this->tokenService);
+        $this->cache = $this->createMock(CacheItemPoolInterface::class);
+        $this->service = new RefreshTokenService($this->repository, $this->em, $this->tokenService, $this->cache);
     }
 
     public function testCreateRefreshToken(): void
@@ -46,10 +50,11 @@ class RefreshTokenServiceTest extends TestCase
         $this->em->expects($this->once())->method('persist');
         $this->em->expects($this->once())->method('flush');
 
-        $rawToken = $this->service->createRefreshToken($user, $request);
+        $result = $this->service->createRefreshToken($user, $request);
 
-        // Должны получить обратно raw (не хэшированный) токен
-        $this->assertEquals('raw_token_value', $rawToken);
+        // Должны получить обратно raw (не хэшированный) токен и sessionId
+        $this->assertEquals('raw_token_value', $result['rawToken']);
+        $this->assertArrayHasKey('sessionId', $result);
     }
 
     public function testRotateRefreshTokenSuccess(): void
@@ -143,5 +148,47 @@ class RefreshTokenServiceTest extends TestCase
         $this->em->expects($this->once())->method('flush');
 
         $this->service->revokeAllUserTokens($user);
+    }
+
+    public function testRevokeSessionByIdSuccess(): void
+    {
+        $user = new User();
+        $token = new RefreshToken();
+        $token->setUser($user);
+        $token->setTokenHash('some_hash');
+        $token->setExpiresAt(new \DateTimeImmutable('+30 days'));
+
+        $this->repository->expects($this->once())
+            ->method('findByIdAndUser')
+            ->with('session-uuid', $user)
+            ->willReturn($token);
+
+        $this->em->expects($this->once())->method('remove')->with($token);
+        $this->em->expects($this->once())->method('flush');
+
+        $this->cache->expects($this->once())
+            ->method('deleteItem')
+            ->with($this->stringContains('session_valid_'));
+
+        $result = $this->service->revokeSessionById('session-uuid', $user);
+
+        $this->assertTrue($result);
+    }
+
+    public function testRevokeSessionByIdNotFound(): void
+    {
+        $user = new User();
+
+        $this->repository->expects($this->once())
+            ->method('findByIdAndUser')
+            ->with('nonexistent-id', $user)
+            ->willReturn(null);
+
+        $this->em->expects($this->never())->method('remove');
+        $this->em->expects($this->never())->method('flush');
+
+        $result = $this->service->revokeSessionById('nonexistent-id', $user);
+
+        $this->assertFalse($result);
     }
 }

@@ -8,6 +8,7 @@ use App\DTO\User\ChangeMasterPasswordDTO;
 use App\DTO\User\ReEncryptedItemDTO;
 use App\Entity\User;
 use App\Service\Auth\RefreshTokenService;
+use App\Service\Security\SecurityLogService;
 use App\Service\User\MasterPasswordService;
 use App\Service\User\UserService;
 use App\Trait\ApiResponseTrait;
@@ -31,6 +32,7 @@ class UserController extends AbstractController
         private readonly UserService $userService,
         private readonly RefreshTokenService $refreshTokenService,
         private readonly MasterPasswordService $masterPasswordService,
+        private readonly SecurityLogService $securityLogService,
         private readonly ValidatorInterface $validator,
         #[Autowire(env: 'bool:RATE_LIMITER_ENABLED')]
         private readonly bool $rateLimiterEnabled = true,
@@ -133,5 +135,47 @@ class UserController extends AbstractController
         } catch (\RuntimeException $e) {
             return $this->errorResponse($e->getMessage(), 403);
         }
+    }
+
+    #[Route('/sessions', methods: ['GET'])]
+    public function getSessions(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+
+        $currentIp = $request->getClientIp();
+        $currentDeviceInfo = $request->headers->get('User-Agent');
+
+        $tokens = $this->refreshTokenService->getActiveSessions($user);
+
+        $sessions = array_map(static function ($token) use ($currentIp, $currentDeviceInfo): array {
+            return [
+                'id' => $token->getId()?->toRfc4122(),
+                'ipAddress' => $token->getIpAddress(),
+                'deviceInfo' => $token->getDeviceInfo(),
+                'createdAt' => $token->getCreatedAt()->format(\DateTimeInterface::ATOM),
+                'expiresAt' => $token->getExpiresAt()->format(\DateTimeInterface::ATOM),
+                'isCurrent' => $token->getIpAddress() === $currentIp && $token->getDeviceInfo() === $currentDeviceInfo,
+            ];
+        }, $tokens);
+
+        return $this->successResponse($sessions);
+    }
+
+    #[Route('/sessions/{id}', methods: ['DELETE'])]
+    public function deleteSession(string $id, Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+
+        $revoked = $this->refreshTokenService->revokeSessionById($id, $user);
+
+        if (!$revoked) {
+            return $this->errorResponse('Session not found', 404);
+        }
+
+        $this->securityLogService->log('session.revoked', $user, $request, ['session_id' => $id]);
+
+        return $this->noContentResponse();
     }
 }

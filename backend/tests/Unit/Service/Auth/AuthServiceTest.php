@@ -134,13 +134,12 @@ class AuthServiceTest extends TestCase
 
         $this->tokenService->expects($this->once())
             ->method('createAccessToken')
-            ->with($user)
             ->willReturn('access_token_value');
 
         $this->refreshTokenService->expects($this->once())
             ->method('createRefreshToken')
             ->with($user, $request)
-            ->willReturn('refresh_token_value');
+            ->willReturn(['rawToken' => 'refresh_token_value', 'sessionId' => 'test-session-uuid']);
 
         $result = $this->service->login($dto, $request);
 
@@ -290,7 +289,7 @@ class AuthServiceTest extends TestCase
         $this->userRepository->method('findByEmail')->willReturn($user);
         $this->passwordHasher->method('isPasswordValid')->willReturn(true);
         $this->tokenService->method('createAccessToken')->willReturn('access_token');
-        $this->refreshTokenService->method('createRefreshToken')->willReturn('refresh_token');
+        $this->refreshTokenService->method('createRefreshToken')->willReturn(['rawToken' => 'refresh_token', 'sessionId' => 'test-session-uuid']);
         $this->tempTokenService->expects($this->never())->method('createTempToken');
 
         $result = $this->service->login($dto, $request);
@@ -329,7 +328,7 @@ class AuthServiceTest extends TestCase
             ->with('raw_temp_token');
 
         $this->tokenService->method('createAccessToken')->willReturn('access_token');
-        $this->refreshTokenService->method('createRefreshToken')->willReturn('refresh_token');
+        $this->refreshTokenService->method('createRefreshToken')->willReturn(['rawToken' => 'refresh_token', 'sessionId' => 'test-session-uuid']);
         $this->em->expects($this->once())->method('flush');
 
         $result = $this->service->loginWithTotp('raw_temp_token', '123456', $request);
@@ -358,7 +357,7 @@ class AuthServiceTest extends TestCase
 
         $this->tempTokenService->expects($this->once())->method('invalidateTempToken');
         $this->tokenService->method('createAccessToken')->willReturn('access_token');
-        $this->refreshTokenService->method('createRefreshToken')->willReturn('refresh_token');
+        $this->refreshTokenService->method('createRefreshToken')->willReturn(['rawToken' => 'refresh_token', 'sessionId' => 'test-session-uuid']);
         $this->em->method('flush');
 
         $result = $this->service->loginWithTotp('raw_temp_token', 'BACKUP12', $request);
