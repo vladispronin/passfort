@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
+import { RouterLink } from 'vue-router'
 import ChangeMasterPasswordForm from '../../components/user/ChangeMasterPasswordForm.vue'
 import ChangeEmailForm from '../../components/user/ChangeEmailForm.vue'
 import TwoFactorSettings from '../../components/user/TwoFactorSettings.vue'
@@ -65,6 +66,16 @@ const showEmailForm = ref(false)
         <div class="border-t border-slate-100 pt-6">
           <h4 class="text-sm font-medium text-slate-700 mb-3">Активные сессии</h4>
           <SessionsManager />
+        </div>
+
+        <div class="border-t border-slate-100 pt-6">
+          <h4 class="text-sm font-medium text-slate-700 mb-3">История событий</h4>
+          <RouterLink
+            to="/security-log"
+            class="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
+          >
+            Просмотр истории безопасности →
+          </RouterLink>
         </div>
       </div>
     </main>

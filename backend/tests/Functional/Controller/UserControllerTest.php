@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional\Controller;
 
 use App\Entity\RefreshToken;
+use App\Entity\SecurityLog;
 use App\Service\Auth\RefreshTokenService;
 use App\Tests\Functional\ApiTestCase;
 use Symfony\Component\HttpFoundation\Request;
@@ -488,6 +489,128 @@ class UserControllerTest extends ApiTestCase
         $updated = $this->em->getRepository(\App\Entity\User::class)->findOneBy(['email' => 'confirm-dest@example.com']);
         $this->assertNotNull($updated);
         $this->assertTrue($updated->isEmailVerified());
+    }
+
+    // -------------------------------------------------------------------------
+    // GET /api/v1/user/security-log
+    // -------------------------------------------------------------------------
+
+    private function createSecurityLog(\App\Entity\User $user, string $action, string $ip = '127.0.0.1'): SecurityLog
+    {
+        $log = new SecurityLog();
+        $log->setUser($user);
+        $log->setAction($action);
+        $log->setIpAddress($ip);
+        $log->setUserAgent('TestAgent/1.0');
+        $this->em->persist($log);
+        $this->em->flush();
+
+        return $log;
+    }
+
+    public function testGetSecurityLogRequiresAuth(): void
+    {
+        $this->jsonRequest('GET', '/api/v1/user/security-log');
+        $this->assertEquals(401, $this->getStatusCode());
+    }
+
+    public function testGetSecurityLogReturnsEmptyForNewUser(): void
+    {
+        $user  = $this->createTestUser('seclog_empty@example.com', $this->masterPasswordHash);
+        $token = $this->getJwtToken($user);
+
+        $response = $this->jsonRequest('GET', '/api/v1/user/security-log', [], $token);
+
+        $this->assertEquals(200, $this->getStatusCode());
+        $this->assertIsArray($response['data']);
+        $this->assertCount(0, $response['data']);
+        $this->assertEquals(0, $response['meta']['pagination']['total']);
+    }
+
+    public function testGetSecurityLogReturnsPaginatedResults(): void
+    {
+        $user  = $this->createTestUser('seclog_list@example.com', $this->masterPasswordHash);
+        $token = $this->getJwtToken($user);
+
+        $this->createSecurityLog($user, 'user.login');
+        $this->createSecurityLog($user, 'user.logout');
+
+        $response = $this->jsonRequest('GET', '/api/v1/user/security-log', [], $token);
+
+        $this->assertEquals(200, $this->getStatusCode());
+        $this->assertCount(2, $response['data']);
+
+        $entry = $response['data'][0];
+        $this->assertArrayHasKey('id', $entry);
+        $this->assertArrayHasKey('action', $entry);
+        $this->assertArrayHasKey('ipAddress', $entry);
+        $this->assertArrayHasKey('userAgent', $entry);
+        $this->assertArrayHasKey('metadata', $entry);
+        $this->assertArrayHasKey('createdAt', $entry);
+    }
+
+    public function testGetSecurityLogPaginationMeta(): void
+    {
+        $user  = $this->createTestUser('seclog_meta@example.com', $this->masterPasswordHash);
+        $token = $this->getJwtToken($user);
+
+        for ($i = 0; $i < 5; $i++) {
+            $this->createSecurityLog($user, 'user.login');
+        }
+
+        $response = $this->jsonRequest('GET', '/api/v1/user/security-log?page=1&limit=2', [], $token);
+
+        $this->assertEquals(200, $this->getStatusCode());
+        $this->assertCount(2, $response['data']);
+
+        $pagination = $response['meta']['pagination'];
+        $this->assertEquals(1, $pagination['page']);
+        $this->assertEquals(2, $pagination['limit']);
+        $this->assertEquals(5, $pagination['total']);
+        $this->assertEquals(3, $pagination['pages']);
+    }
+
+    public function testGetSecurityLogOnlyReturnsOwnLogs(): void
+    {
+        $user1  = $this->createTestUser('seclog_own1@example.com', $this->masterPasswordHash);
+        $user2  = $this->createTestUser('seclog_own2@example.com', $this->masterPasswordHash);
+        $token1 = $this->getJwtToken($user1);
+
+        $this->createSecurityLog($user1, 'user.login');
+        $this->createSecurityLog($user2, 'user.login');
+
+        $response = $this->jsonRequest('GET', '/api/v1/user/security-log', [], $token1);
+
+        $this->assertEquals(200, $this->getStatusCode());
+        $this->assertCount(1, $response['data']);
+        $this->assertEquals(1, $response['meta']['pagination']['total']);
+    }
+
+    public function testGetSecurityLogPageParam(): void
+    {
+        $user  = $this->createTestUser('seclog_page@example.com', $this->masterPasswordHash);
+        $token = $this->getJwtToken($user);
+
+        for ($i = 0; $i < 3; $i++) {
+            $this->createSecurityLog($user, 'user.login');
+        }
+
+        $response = $this->jsonRequest('GET', '/api/v1/user/security-log?page=2&limit=2', [], $token);
+
+        $this->assertEquals(200, $this->getStatusCode());
+        $this->assertCount(1, $response['data']);
+        $this->assertEquals(2, $response['meta']['pagination']['page']);
+    }
+
+    public function testGetSecurityLogLimitCap(): void
+    {
+        $user  = $this->createTestUser('seclog_cap@example.com', $this->masterPasswordHash);
+        $token = $this->getJwtToken($user);
+
+        $response = $this->jsonRequest('GET', '/api/v1/user/security-log?limit=200', [], $token);
+
+        $this->assertEquals(200, $this->getStatusCode());
+        $this->assertEquals(100, $response['meta']['pagination']['limit']);
     }
 
     public function testOldTokensInvalidatedAfterPasswordChange(): void

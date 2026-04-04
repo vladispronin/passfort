@@ -7,7 +7,9 @@ namespace App\Controller;
 use App\DTO\User\ChangeMasterPasswordDTO;
 use App\DTO\User\EmailChangeRequestDTO;
 use App\DTO\User\ReEncryptedItemDTO;
+use App\Entity\SecurityLog;
 use App\Entity\User;
+use App\Repository\SecurityLogRepository;
 use App\Service\Auth\RefreshTokenService;
 use App\Service\Security\SecurityLogService;
 use App\Service\Security\SecurityNotificationService;
@@ -38,6 +40,7 @@ class UserController extends AbstractController
         private readonly SecurityLogService $securityLogService,
         private readonly SecurityNotificationService $securityNotificationService,
         private readonly EmailChangeService $emailChangeService,
+        private readonly SecurityLogRepository $securityLogRepository,
         private readonly ValidatorInterface $validator,
         #[Autowire(env: 'bool:RATE_LIMITER_ENABLED')]
         private readonly bool $rateLimiterEnabled = true,
@@ -218,6 +221,37 @@ class UserController extends AbstractController
         }, $tokens);
 
         return $this->successResponse($sessions);
+    }
+
+    #[Route('/security-log', methods: ['GET'])]
+    public function getSecurityLog(Request $request): JsonResponse
+    {
+        $page  = max(1, (int) $request->query->get('page', 1));
+        $limit = min(100, max(1, (int) $request->query->get('limit', 20)));
+
+        /** @var User $user */
+        $user = $this->getUser();
+
+        $logs  = $this->securityLogRepository->findByUserPaginated($user, $page, $limit);
+        $total = $this->securityLogRepository->countByUser($user);
+
+        $data = array_map(static fn(SecurityLog $log): array => [
+            'id'        => $log->getId(),
+            'action'    => $log->getAction(),
+            'ipAddress' => $log->getIpAddress(),
+            'userAgent' => $log->getUserAgent(),
+            'metadata'  => $log->getMetadata(),
+            'createdAt' => $log->getCreatedAt()->format(\DateTimeInterface::ATOM),
+        ], $logs);
+
+        return $this->successResponse($data, [
+            'pagination' => [
+                'page'  => $page,
+                'limit' => $limit,
+                'total' => $total,
+                'pages' => $total > 0 ? (int) ceil($total / $limit) : 0,
+            ],
+        ]);
     }
 
     #[Route('/sessions/{id}', methods: ['DELETE'])]
