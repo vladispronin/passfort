@@ -82,6 +82,10 @@ jobs:
           echo "DATABASE_URL=mysql://passfort_user:passfort_password@127.0.0.1:3306/passfort_test?serverVersion=8.0&charset=utf8mb4" >> backend/.env.test
           echo "REDIS_URL=redis://127.0.0.1:6379" >> backend/.env.test
           echo "REDIS_DSN=redis://127.0.0.1:6379" >> backend/.env.test
+          echo "MAILER_DSN=null://null" >> backend/.env.test
+          echo "MAILER_FROM_EMAIL=noreply@passfort.test" >> backend/.env.test
+          echo 'MAILER_FROM_NAME="PassFort Test"' >> backend/.env.test
+          echo "APP_URL=http://localhost" >> backend/.env.test
 
       - name: Установка зависимостей Composer
         run: cd backend && composer install --no-interaction --prefer-dist --optimize-autoloader
@@ -98,6 +102,10 @@ jobs:
           JWT_PUBLIC_KEY: "%kernel.project_dir%/config/jwt/public.pem"
           JWT_PASSPHRASE: "jkl"
           KAFKA_BROKERS: "localhost:9092"
+          MAILER_DSN: "null://null"
+          MAILER_FROM_EMAIL: "noreply@passfort.test"
+          MAILER_FROM_NAME: "PassFort Test"
+          APP_URL: "http://localhost"
         run: cd backend && php bin/phpunit --testdox
 
   frontend-tests:

@@ -46,6 +46,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: Types::BOOLEAN)]
     private bool $isActive = true;
 
+    #[ORM\Column(name: 'is_email_verified', type: Types::BOOLEAN)]
+    private bool $isEmailVerified = false;
+
     #[ORM\Column(name: 'is_2fa_enabled', type: Types::BOOLEAN)]
     private bool $is2faEnabled = false;
 
@@ -70,10 +73,14 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(targetEntity: RefreshToken::class, mappedBy: 'user', cascade: ['persist', 'remove'])]
     private Collection $refreshTokens;
 
+    #[ORM\OneToMany(targetEntity: EmailVerificationToken::class, mappedBy: 'user', cascade: ['persist', 'remove'])]
+    private Collection $emailVerificationTokens;
+
     public function __construct()
     {
         $this->vaults = new ArrayCollection();
         $this->refreshTokens = new ArrayCollection();
+        $this->emailVerificationTokens = new ArrayCollection();
     }
 
     #[ORM\PrePersist]
@@ -173,6 +180,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setIsActive(bool $isActive): self
     {
         $this->isActive = $isActive;
+        return $this;
+    }
+
+    public function isEmailVerified(): bool
+    {
+        return $this->isEmailVerified;
+    }
+
+    public function setIsEmailVerified(bool $isEmailVerified): self
+    {
+        $this->isEmailVerified = $isEmailVerified;
         return $this;
     }
 

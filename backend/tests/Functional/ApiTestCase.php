@@ -48,6 +48,7 @@ abstract class ApiTestCase extends WebTestCase
             $conn->executeStatement('SET FOREIGN_KEY_CHECKS=0');
             $conn->executeStatement('DELETE FROM security_logs');
             $conn->executeStatement('DELETE FROM refresh_tokens');
+            $conn->executeStatement('DELETE FROM email_verification_tokens');
             $conn->executeStatement('DELETE FROM vault_items');
             $conn->executeStatement('DELETE FROM categories');
             $conn->executeStatement('DELETE FROM vaults');
@@ -61,8 +62,11 @@ abstract class ApiTestCase extends WebTestCase
     /**
      * Создаёт тестового пользователя и сохраняет его в базу данных.
      */
-    protected function createTestUser(string $email = 'test@example.com', ?string $masterPasswordHash = null): User
-    {
+    protected function createTestUser(
+        string $email = 'test@example.com',
+        ?string $masterPasswordHash = null,
+        bool $emailVerified = true,
+    ): User {
         $masterPasswordHash = $masterPasswordHash ?? str_repeat('a', 64);
 
         // Создаём пользователя через новый EM чтобы данные были видны KernelBrowser
@@ -73,6 +77,7 @@ abstract class ApiTestCase extends WebTestCase
         $user->setSalt(bin2hex(random_bytes(16)));
         $user->setKdfParams(['algorithm' => 'argon2id', 'iterations' => 3]);
         $user->setMasterPasswordHash($masterPasswordHash);
+        $user->setIsEmailVerified($emailVerified);
 
         $hasher = static::getContainer()->get(UserPasswordHasherInterface::class);
         $hashed = $hasher->hashPassword($user, $masterPasswordHash);

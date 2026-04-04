@@ -7,8 +7,10 @@ namespace App\Tests\Unit\Service\Auth;
 use App\DTO\Auth\LoginDTO;
 use App\DTO\Auth\RegisterDTO;
 use App\Entity\User;
+use App\Exception\EmailNotVerifiedException;
 use App\Repository\UserRepository;
 use App\Service\Auth\AuthService;
+use App\Service\Auth\EmailVerificationService;
 use App\Service\Auth\RefreshTokenService;
 use App\Service\Auth\TempTokenService;
 use App\Service\Auth\TokenService;
@@ -33,6 +35,7 @@ class AuthServiceTest extends TestCase
     private VaultService&MockObject $vaultService;
     private TotpService&MockObject $totpService;
     private TempTokenService&MockObject $tempTokenService;
+    private EmailVerificationService&MockObject $emailVerificationService;
 
     protected function setUp(): void
     {
@@ -44,6 +47,7 @@ class AuthServiceTest extends TestCase
         $this->vaultService = $this->createMock(VaultService::class);
         $this->totpService = $this->createMock(TotpService::class);
         $this->tempTokenService = $this->createMock(TempTokenService::class);
+        $this->emailVerificationService = $this->createMock(EmailVerificationService::class);
 
         $this->service = new AuthService(
             $this->userRepository,
@@ -54,6 +58,7 @@ class AuthServiceTest extends TestCase
             $this->vaultService,
             $this->totpService,
             $this->tempTokenService,
+            $this->emailVerificationService,
         );
     }
 
@@ -84,6 +89,8 @@ class AuthServiceTest extends TestCase
         $this->em->expects($this->once())->method('flush');
 
         $this->vaultService->expects($this->once())->method('createDefaultVault');
+
+        $this->emailVerificationService->expects($this->once())->method('sendVerificationEmail');
 
         $user = $this->service->register($dto);
 
@@ -116,6 +123,7 @@ class AuthServiceTest extends TestCase
         $user = new User();
         $user->setEmail('test@example.com');
         $user->setIsActive(true);
+        $user->setIsEmailVerified(true);
 
         $dto = new LoginDTO();
         $dto->email = 'test@example.com';
@@ -192,6 +200,7 @@ class AuthServiceTest extends TestCase
         $user = new User();
         $user->setEmail('test@example.com');
         $user->setIsActive(true);
+        $user->setIsEmailVerified(true);
 
         $dto = new LoginDTO();
         $dto->email = 'test@example.com';
@@ -251,6 +260,7 @@ class AuthServiceTest extends TestCase
         $user = new User();
         $user->setEmail('test@example.com');
         $user->setIsActive(true);
+        $user->setIsEmailVerified(true);
         $user->setIs2faEnabled(true);
 
         $dto = new LoginDTO();
@@ -278,6 +288,7 @@ class AuthServiceTest extends TestCase
         $user = new User();
         $user->setEmail('test@example.com');
         $user->setIsActive(true);
+        $user->setIsEmailVerified(true);
         // is2faEnabled = false по умолчанию
 
         $dto = new LoginDTO();
@@ -376,6 +387,31 @@ class AuthServiceTest extends TestCase
         $this->expectException(AuthenticationException::class);
 
         $this->service->loginWithTotp('invalid_token', '123456', $request);
+    }
+
+    public function testLoginFailsEmailNotVerified(): void
+    {
+        $user = new User();
+        $user->setEmail('test@example.com');
+        $user->setIsActive(true);
+        // isEmailVerified = false по умолчанию
+
+        $dto = new LoginDTO();
+        $dto->email = 'test@example.com';
+        $dto->masterPasswordHash = str_repeat('a', 64);
+
+        $request = Request::create('/');
+
+        $this->userRepository->expects($this->once())
+            ->method('findByEmail')
+            ->willReturn($user);
+
+        // Пароль НЕ должен проверяться — блокировка раньше
+        $this->passwordHasher->expects($this->never())->method('isPasswordValid');
+
+        $this->expectException(EmailNotVerifiedException::class);
+
+        $this->service->login($dto, $request);
     }
 
     public function testLoginWithTotpFailsWithInvalidCode(): void

@@ -38,6 +38,8 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      mailpit:
+        condition: service_started
     dns:
       - 127.0.0.11
       - 8.8.8.8
@@ -75,6 +77,17 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - passfort_network
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "18025:8025"
+      - "11025:1025"
+    environment:
+      MP_MAX_MESSAGES: 500
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
     networks:
       - passfort_network
 
