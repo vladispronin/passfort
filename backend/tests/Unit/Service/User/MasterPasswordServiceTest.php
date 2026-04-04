@@ -12,6 +12,7 @@ use App\Repository\VaultItemRepository;
 use App\Service\Auth\RefreshTokenService;
 use App\Service\Auth\TokenService;
 use App\Service\Security\SecurityLogService;
+use App\Service\Security\SecurityNotificationService;
 use App\Service\User\MasterPasswordService;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -30,6 +31,7 @@ class MasterPasswordServiceTest extends TestCase
     private RefreshTokenService&MockObject $refreshTokenService;
     private TokenService&MockObject $tokenService;
     private SecurityLogService&MockObject $securityLogService;
+    private SecurityNotificationService&MockObject $securityNotificationService;
 
     protected function setUp(): void
     {
@@ -39,6 +41,7 @@ class MasterPasswordServiceTest extends TestCase
         $this->refreshTokenService = $this->createMock(RefreshTokenService::class);
         $this->tokenService = $this->createMock(TokenService::class);
         $this->securityLogService = $this->createMock(SecurityLogService::class);
+        $this->securityNotificationService = $this->createMock(SecurityNotificationService::class);
 
         $this->service = new MasterPasswordService(
             $this->em,
@@ -47,6 +50,7 @@ class MasterPasswordServiceTest extends TestCase
             $this->refreshTokenService,
             $this->tokenService,
             $this->securityLogService,
+            $this->securityNotificationService,
         );
     }
 
@@ -218,6 +222,26 @@ class MasterPasswordServiceTest extends TestCase
             ->with($user);
 
         $this->service->changeMasterPassword($user, $this->makeDto([]), new Request());
+    }
+
+    public function testChangeMasterPasswordDispatchesSecurityNotification(): void
+    {
+        $user = $this->makeUser();
+        $request = new Request();
+
+        $this->passwordHasher->method('isPasswordValid')->willReturn(true);
+        $this->vaultItemRepository->method('findAllByUser')->willReturn([]);
+        $this->passwordHasher->method('hashPassword')->willReturn('hashed');
+        $this->em->method('flush');
+        $this->em->method('commit');
+        $this->tokenService->method('createAccessToken')->willReturn('token');
+        $this->refreshTokenService->method('createRefreshToken')->willReturn(['rawToken' => 'refresh', 'sessionId' => 'uuid']);
+
+        $this->securityNotificationService->expects($this->once())
+            ->method('notifyPasswordChanged')
+            ->with($user, $request);
+
+        $this->service->changeMasterPassword($user, $this->makeDto([]), $request);
     }
 
     public function testChangeMasterPasswordLogsSecurityEvent(): void

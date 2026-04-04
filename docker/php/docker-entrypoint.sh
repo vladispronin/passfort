@@ -27,4 +27,11 @@ mkdir -p /var/www/backend/var/cache/dev/doctrine/orm/Proxies
 mkdir -p /var/www/backend/var/log
 chmod -R 777 /var/www/backend/var/
 
+# Прогреть кэш в prod, чтобы proxy-классы Doctrine были сгенерированы заранее
+if [ "$APP_ENV" = "prod" ]; then
+    echo "Warming up cache..."
+    cd /var/www/backend && php bin/console cache:warmup --env=prod --no-debug || echo "Cache warmup failed, continuing..."
+    chmod -R 777 /var/www/backend/var/
+fi
+
 exec "$@"

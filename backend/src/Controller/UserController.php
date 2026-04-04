@@ -9,6 +9,7 @@ use App\DTO\User\ReEncryptedItemDTO;
 use App\Entity\User;
 use App\Service\Auth\RefreshTokenService;
 use App\Service\Security\SecurityLogService;
+use App\Service\Security\SecurityNotificationService;
 use App\Service\User\MasterPasswordService;
 use App\Service\User\UserService;
 use App\Trait\ApiResponseTrait;
@@ -33,6 +34,7 @@ class UserController extends AbstractController
         private readonly RefreshTokenService $refreshTokenService,
         private readonly MasterPasswordService $masterPasswordService,
         private readonly SecurityLogService $securityLogService,
+        private readonly SecurityNotificationService $securityNotificationService,
         private readonly ValidatorInterface $validator,
         #[Autowire(env: 'bool:RATE_LIMITER_ENABLED')]
         private readonly bool $rateLimiterEnabled = true,
@@ -76,10 +78,17 @@ class UserController extends AbstractController
     }
 
     #[Route('/me', methods: ['DELETE'])]
-    public function delete(): JsonResponse
+    public function delete(Request $request): JsonResponse
     {
         /** @var User $user */
         $user = $this->getUser();
+
+        // Сохраняем email до удаления — после flush сущность уже недоступна
+        $email = $user->getEmail();
+
+        // Уведомляем до удаления, чтобы email попал в очередь до потери данных
+        $this->securityNotificationService->notifyAccountDeleted($email, $request);
+
         $this->userService->delete($user);
         return $this->noContentResponse();
     }

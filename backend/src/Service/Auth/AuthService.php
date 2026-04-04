@@ -9,6 +9,7 @@ use App\DTO\Auth\RegisterDTO;
 use App\Entity\User;
 use App\Exception\EmailNotVerifiedException;
 use App\Repository\UserRepository;
+use App\Service\Security\SecurityNotificationService;
 use App\Service\Vault\VaultService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -27,6 +28,7 @@ class AuthService
         private readonly TotpService $totpService,
         private readonly TempTokenService $tempTokenService,
         private readonly EmailVerificationService $emailVerificationService,
+        private readonly SecurityNotificationService $securityNotificationService,
     ) {}
 
     public function register(RegisterDTO $dto): User
@@ -121,6 +123,9 @@ class AuthService
     {
         $tokenData = $this->refreshTokenService->createRefreshToken($user, $request);
         $accessToken = $this->tokenService->createAccessToken($user, $tokenData['sessionId']);
+
+        // Уведомляем пользователя о новой сессии
+        $this->securityNotificationService->notifyNewLogin($user, $request);
 
         return [
             'access_token' => $accessToken,

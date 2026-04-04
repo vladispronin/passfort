@@ -12,6 +12,7 @@ use App\Repository\VaultItemRepository;
 use App\Service\Auth\RefreshTokenService;
 use App\Service\Auth\TokenService;
 use App\Service\Security\SecurityLogService;
+use App\Service\Security\SecurityNotificationService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -26,6 +27,7 @@ class MasterPasswordService
         private readonly RefreshTokenService $refreshTokenService,
         private readonly TokenService $tokenService,
         private readonly SecurityLogService $securityLogService,
+        private readonly SecurityNotificationService $securityNotificationService,
     ) {}
 
     /**
@@ -36,12 +38,12 @@ class MasterPasswordService
      */
     public function changeMasterPassword(User $user, ChangeMasterPasswordDTO $dto, Request $request): array
     {
-        // 1. Верификация текущего пароля
+        // Верификация текущего пароля
         if (!$this->passwordHasher->isPasswordValid($user, $dto->currentMasterPasswordHash)) {
             throw new AuthenticationException('Invalid current master password');
         }
 
-        // 2. Проверка ownership всех переданных items
+        // Проверка ownership всех переданных items
         $userItems = $this->vaultItemRepository->findAllByUser($user);
         $userItemIds = array_map(
             static fn(VaultItem $vi) => $vi->getId()->toRfc4122(),
@@ -63,7 +65,7 @@ class MasterPasswordService
             $itemsMap[$item->getId()->toRfc4122()] = $item;
         }
 
-        // 3. Атомарное обновление пользователя и всех vault items
+        // Атомарное обновление пользователя и всех vault items
         $this->em->beginTransaction();
         try {
             $user->setSalt($dto->newSalt);
@@ -87,10 +89,10 @@ class MasterPasswordService
             throw $e;
         }
 
-        // 4. Инвалидация всех активных сессий
+        // Инвалидация всех активных сессий
         $this->refreshTokenService->revokeAllUserTokens($user);
 
-        // 5. Логирование события безопасности
+        // Логирование события безопасности
         $this->securityLogService->log(
             'user.master_password_changed',
             $user,
@@ -98,7 +100,10 @@ class MasterPasswordService
             ['items_count' => count($dto->items)],
         );
 
-        // 6. Выдача новых токенов
+        // Email-уведомление о смене мастер-пароля
+        $this->securityNotificationService->notifyPasswordChanged($user, $request);
+
+        // Выдача новых токенов
         $tokenData = $this->refreshTokenService->createRefreshToken($user, $request);
         return [
             'access_token' => $this->tokenService->createAccessToken($user, $tokenData['sessionId']),
