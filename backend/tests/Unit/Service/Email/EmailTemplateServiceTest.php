@@ -43,6 +43,73 @@ class EmailTemplateServiceTest extends TestCase
         $this->assertStringNotContainsString('<script>', $html);
     }
 
+    public function testRenderSecurityNewLoginContainsIpAndDevice(): void
+    {
+        $html = $this->service->renderHtml('security_new_login', [
+            'ip'       => '192.168.1.1',
+            'device'   => 'Mozilla/5.0',
+            'datetime' => '04.04.2026 12:00:00 UTC',
+        ]);
+
+        $this->assertStringContainsString('192.168.1.1', $html);
+        $this->assertStringContainsString('Mozilla/5.0', $html);
+        $this->assertStringContainsString('04.04.2026 12:00:00 UTC', $html);
+        $this->assertStringContainsString('Новый вход в аккаунт', $html);
+    }
+
+    public function testRenderSecurityNewLoginEscapesXss(): void
+    {
+        $html = $this->service->renderHtml('security_new_login', [
+            'ip'       => '<script>alert(1)</script>',
+            'device'   => '<img src=x>',
+            'datetime' => '',
+        ]);
+
+        $this->assertStringNotContainsString('<script>', $html);
+        $this->assertStringNotContainsString('<img', $html);
+    }
+
+    public function testRenderSecurityPasswordChangedContainsIp(): void
+    {
+        $html = $this->service->renderHtml('security_password_changed', [
+            'ip'       => '10.0.0.1',
+            'datetime' => '04.04.2026 15:00:00 UTC',
+        ]);
+
+        $this->assertStringContainsString('10.0.0.1', $html);
+        $this->assertStringContainsString('04.04.2026 15:00:00 UTC', $html);
+        $this->assertStringContainsString('Мастер-пароль изменён', $html);
+    }
+
+    public function testRenderSecurityPasswordChangedEscapesXss(): void
+    {
+        $html = $this->service->renderHtml('security_password_changed', [
+            'ip'       => '<script>evil()</script>',
+            'datetime' => '',
+        ]);
+
+        $this->assertStringNotContainsString('<script>', $html);
+    }
+
+    public function testRenderSecurityAccountDeletedContainsIp(): void
+    {
+        $html = $this->service->renderHtml('security_account_deleted', [
+            'ip'       => '172.16.0.1',
+            'datetime' => '04.04.2026 18:00:00 UTC',
+        ]);
+
+        $this->assertStringContainsString('172.16.0.1', $html);
+        $this->assertStringContainsString('04.04.2026 18:00:00 UTC', $html);
+        $this->assertStringContainsString('Аккаунт удалён', $html);
+    }
+
+    public function testRenderSecurityNewLoginUsesDefaultsForMissingContext(): void
+    {
+        $html = $this->service->renderHtml('security_new_login', []);
+
+        $this->assertStringContainsString('unknown', $html);
+    }
+
     public function testRenderUnknownTemplateThrows(): void
     {
         $this->expectException(\InvalidArgumentException::class);

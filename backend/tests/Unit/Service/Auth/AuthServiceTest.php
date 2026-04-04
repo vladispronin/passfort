@@ -15,6 +15,7 @@ use App\Service\Auth\RefreshTokenService;
 use App\Service\Auth\TempTokenService;
 use App\Service\Auth\TokenService;
 use App\Service\Auth\TotpService;
+use App\Service\Security\SecurityNotificationService;
 use App\Service\Vault\VaultService;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -36,6 +37,7 @@ class AuthServiceTest extends TestCase
     private TotpService&MockObject $totpService;
     private TempTokenService&MockObject $tempTokenService;
     private EmailVerificationService&MockObject $emailVerificationService;
+    private SecurityNotificationService&MockObject $securityNotificationService;
 
     protected function setUp(): void
     {
@@ -48,6 +50,7 @@ class AuthServiceTest extends TestCase
         $this->totpService = $this->createMock(TotpService::class);
         $this->tempTokenService = $this->createMock(TempTokenService::class);
         $this->emailVerificationService = $this->createMock(EmailVerificationService::class);
+        $this->securityNotificationService = $this->createMock(SecurityNotificationService::class);
 
         $this->service = new AuthService(
             $this->userRepository,
@@ -59,6 +62,7 @@ class AuthServiceTest extends TestCase
             $this->totpService,
             $this->tempTokenService,
             $this->emailVerificationService,
+            $this->securityNotificationService,
         );
     }
 
@@ -281,6 +285,31 @@ class AuthServiceTest extends TestCase
         $this->assertTrue($result['requires_2fa']);
         $this->assertEquals('temp_token_value', $result['temp_token']);
         $this->assertArrayNotHasKey('access_token', $result);
+    }
+
+    public function testLoginDispatchesSecurityNotification(): void
+    {
+        $user = new User();
+        $user->setEmail('test@example.com');
+        $user->setIsActive(true);
+        $user->setIsEmailVerified(true);
+
+        $dto = new LoginDTO();
+        $dto->email = 'test@example.com';
+        $dto->masterPasswordHash = str_repeat('a', 64);
+
+        $request = Request::create('/');
+
+        $this->userRepository->method('findByEmail')->willReturn($user);
+        $this->passwordHasher->method('isPasswordValid')->willReturn(true);
+        $this->tokenService->method('createAccessToken')->willReturn('access_token');
+        $this->refreshTokenService->method('createRefreshToken')->willReturn(['rawToken' => 'refresh_token', 'sessionId' => 'uuid']);
+
+        $this->securityNotificationService->expects($this->once())
+            ->method('notifyNewLogin')
+            ->with($user, $request);
+
+        $this->service->login($dto, $request);
     }
 
     public function testLoginReturnsFullTokensWhen2faDisabled(): void
