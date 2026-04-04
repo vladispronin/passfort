@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\DTO\User\ChangeMasterPasswordDTO;
+use App\DTO\User\EmailChangeRequestDTO;
 use App\DTO\User\ReEncryptedItemDTO;
 use App\Entity\User;
 use App\Service\Auth\RefreshTokenService;
 use App\Service\Security\SecurityLogService;
 use App\Service\Security\SecurityNotificationService;
+use App\Service\User\EmailChangeService;
 use App\Service\User\MasterPasswordService;
 use App\Service\User\UserService;
 use App\Trait\ApiResponseTrait;
@@ -35,6 +37,7 @@ class UserController extends AbstractController
         private readonly MasterPasswordService $masterPasswordService,
         private readonly SecurityLogService $securityLogService,
         private readonly SecurityNotificationService $securityNotificationService,
+        private readonly EmailChangeService $emailChangeService,
         private readonly ValidatorInterface $validator,
         #[Autowire(env: 'bool:RATE_LIMITER_ENABLED')]
         private readonly bool $rateLimiterEnabled = true,
@@ -144,6 +147,52 @@ class UserController extends AbstractController
         } catch (\RuntimeException $e) {
             return $this->errorResponse($e->getMessage(), 403);
         }
+    }
+
+    #[Route('/email-change', methods: ['POST'])]
+    public function requestEmailChange(
+        Request $request,
+        RateLimiterFactory $userEmailChangeLimiter,
+    ): JsonResponse {
+        if ($this->rateLimiterEnabled) {
+            $limiter = $userEmailChangeLimiter->create($request->getClientIp());
+            if (!$limiter->consume()->isAccepted()) {
+                return $this->errorResponse('Too many requests', 429);
+            }
+        }
+
+        $data = json_decode($request->getContent(), true) ?? [];
+
+        $dto = new EmailChangeRequestDTO();
+        $dto->newEmail = $data['newEmail'] ?? '';
+
+        $errors = $this->validator->validate($dto);
+        if (count($errors) > 0) {
+            $violations = [];
+            foreach ($errors as $error) {
+                $violations[] = [
+                    'property' => $error->getPropertyPath(),
+                    'message'  => $error->getMessage(),
+                ];
+            }
+            return $this->validationErrorResponse($violations);
+        }
+
+        /** @var User $user */
+        $user = $this->getUser();
+
+        try {
+            $this->emailChangeService->requestEmailChange($user, $dto->newEmail);
+        } catch (\InvalidArgumentException $e) {
+            $statusCode = str_contains($e->getMessage(), 'already in use') ? 409 : 400;
+            return $this->errorResponse($e->getMessage(), $statusCode);
+        }
+
+        $this->securityLogService->log('user.email_change_requested', $user, $request, [
+            'new_email' => $dto->newEmail,
+        ]);
+
+        return $this->successResponse(['message' => 'Confirmation email sent to the new address'], [], 202);
     }
 
     #[Route('/sessions', methods: ['GET'])]

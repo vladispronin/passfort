@@ -51,6 +51,25 @@ class SecurityNotificationService
     }
 
     /**
+     * Уведомление о смене email — отправляется на СТАРЫЙ адрес после подтверждения.
+     * oldEmail передаётся явно, так как User::$email к моменту вызова уже обновлён.
+     */
+    public function notifyEmailChanged(string $oldEmail, string $newEmail, Request $request): void
+    {
+        $this->dispatch(new EmailNotificationMessage(
+            to: $oldEmail,
+            subject: 'Email аккаунта PassFort изменён',
+            template: 'security_email_changed',
+            context: [
+                'new_email' => $newEmail,
+                'ip'        => $request->getClientIp() ?? 'unknown',
+                'device'    => $request->headers->get('User-Agent', 'unknown'),
+                'datetime'  => (new \DateTimeImmutable())->format('d.m.Y H:i:s \U\T\C'),
+            ],
+        ));
+    }
+
+    /**
      * Уведомление об удалении аккаунта.
      * Email передаётся отдельно, так как сущность User уже удаляется к моменту отправки.
      */

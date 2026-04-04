@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Auth;
 
-use App\Entity\EmailVerificationToken;
 use App\Entity\User;
 use App\Exception\EmailVerificationException;
 use App\Message\EmailNotificationMessage;
-use App\Repository\EmailVerificationTokenRepository;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -18,7 +16,6 @@ class EmailVerificationService
 {
     public function __construct(
         private readonly EntityManagerInterface $em,
-        private readonly EmailVerificationTokenRepository $tokenRepository,
         private readonly UserRepository $userRepository,
         private readonly MessageBusInterface $bus,
         #[Autowire(env: 'APP_URL')]
@@ -27,18 +24,12 @@ class EmailVerificationService
 
     public function sendVerificationEmail(User $user): void
     {
-        // Инвалидируем старые токены пользователя
-        $this->tokenRepository->deleteByUser($user);
-
         $raw = bin2hex(random_bytes(32));
         $hash = hash('sha256', $raw);
 
-        $token = new EmailVerificationToken();
-        $token->setUser($user);
-        $token->setTokenHash($hash);
-        $token->setExpiresAt(new \DateTimeImmutable('+24 hours'));
+        $user->setVerificationTokenHash($hash)
+             ->setVerificationTokenExpiresAt(new \DateTimeImmutable('+24 hours'));
 
-        $this->em->persist($token);
         $this->em->flush();
 
         $link = rtrim($this->appUrl, '/') . '/api/v1/auth/verify-email?token=' . $raw;
@@ -57,22 +48,23 @@ class EmailVerificationService
     public function verifyToken(string $rawToken): User
     {
         $hash = hash('sha256', $rawToken);
-        $token = $this->tokenRepository->findByTokenHash($hash);
+        $user = $this->userRepository->findByVerificationTokenHash($hash);
 
-        if ($token === null) {
+        if ($user === null) {
             throw new EmailVerificationException('Invalid or expired token');
         }
 
-        if ($token->isExpired()) {
-            $this->em->remove($token);
+        if ($user->getVerificationTokenExpiresAt() < new \DateTimeImmutable()) {
+            $user->setVerificationTokenHash(null)
+                 ->setVerificationTokenExpiresAt(null);
             $this->em->flush();
             throw new EmailVerificationException('Token has expired');
         }
 
-        $user = $token->getUser();
-        $user->setIsEmailVerified(true);
+        $user->setIsEmailVerified(true)
+             ->setVerificationTokenHash(null)
+             ->setVerificationTokenExpiresAt(null);
 
-        $this->em->remove($token);
         $this->em->flush();
 
         return $user;

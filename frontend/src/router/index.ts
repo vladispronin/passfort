@@ -55,6 +55,11 @@ const router = createRouter({
       name: 'two-factor',
       component: () => import('../views/auth/TwoFactorView.vue'),
     },
+    {
+      path: '/email-change/confirm',
+      name: 'email-change-confirm',
+      component: () => import('../views/auth/EmailChangeConfirmView.vue'),
+    },
   ],
 })
 

@@ -73,14 +73,25 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(targetEntity: RefreshToken::class, mappedBy: 'user', cascade: ['persist', 'remove'])]
     private Collection $refreshTokens;
 
-    #[ORM\OneToMany(targetEntity: EmailVerificationToken::class, mappedBy: 'user', cascade: ['persist', 'remove'])]
-    private Collection $emailVerificationTokens;
+    #[ORM\Column(name: 'pending_email', length: 255, nullable: true)]
+    private ?string $pendingEmail = null;
+
+    #[ORM\Column(name: 'email_change_token_hash', length: 64, nullable: true)]
+    private ?string $emailChangeTokenHash = null;
+
+    #[ORM\Column(name: 'email_change_token_expires_at', type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $emailChangeTokenExpiresAt = null;
+
+    #[ORM\Column(name: 'verification_token_hash', length: 64, nullable: true)]
+    private ?string $verificationTokenHash = null;
+
+    #[ORM\Column(name: 'verification_token_expires_at', type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $verificationTokenExpiresAt = null;
 
     public function __construct()
     {
         $this->vaults = new ArrayCollection();
         $this->refreshTokens = new ArrayCollection();
-        $this->emailVerificationTokens = new ArrayCollection();
     }
 
     #[ORM\PrePersist]
@@ -202,6 +213,61 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function getUpdatedAt(): \DateTimeImmutable
     {
         return $this->updatedAt;
+    }
+
+    public function getPendingEmail(): ?string
+    {
+        return $this->pendingEmail;
+    }
+
+    public function setPendingEmail(?string $pendingEmail): self
+    {
+        $this->pendingEmail = $pendingEmail;
+        return $this;
+    }
+
+    public function getEmailChangeTokenHash(): ?string
+    {
+        return $this->emailChangeTokenHash;
+    }
+
+    public function setEmailChangeTokenHash(?string $emailChangeTokenHash): self
+    {
+        $this->emailChangeTokenHash = $emailChangeTokenHash;
+        return $this;
+    }
+
+    public function getEmailChangeTokenExpiresAt(): ?\DateTimeImmutable
+    {
+        return $this->emailChangeTokenExpiresAt;
+    }
+
+    public function setEmailChangeTokenExpiresAt(?\DateTimeImmutable $emailChangeTokenExpiresAt): self
+    {
+        $this->emailChangeTokenExpiresAt = $emailChangeTokenExpiresAt;
+        return $this;
+    }
+
+    public function getVerificationTokenHash(): ?string
+    {
+        return $this->verificationTokenHash;
+    }
+
+    public function setVerificationTokenHash(?string $verificationTokenHash): self
+    {
+        $this->verificationTokenHash = $verificationTokenHash;
+        return $this;
+    }
+
+    public function getVerificationTokenExpiresAt(): ?\DateTimeImmutable
+    {
+        return $this->verificationTokenExpiresAt;
+    }
+
+    public function setVerificationTokenExpiresAt(?\DateTimeImmutable $verificationTokenExpiresAt): self
+    {
+        $this->verificationTokenExpiresAt = $verificationTokenExpiresAt;
+        return $this;
     }
 
     public function getVaults(): Collection
