@@ -19,7 +19,7 @@ async function loadSessions(): Promise<void> {
   try {
     sessions.value = await userApi.getSessions()
   } catch {
-    uiStore.showToast('Failed to load sessions', 'error')
+    uiStore.showToast('Не удалось загрузить сессии', 'error')
   } finally {
     isLoading.value = false
   }
@@ -29,10 +29,10 @@ async function revokeSession(id: string): Promise<void> {
   revokingId.value = id
   try {
     await userApi.revokeSession(id)
-    uiStore.showToast('Session revoked', 'success')
+    uiStore.showToast('Сессия отозвана', 'success')
     await loadSessions()
   } catch {
-    uiStore.showToast('Failed to revoke session', 'error')
+    uiStore.showToast('Не удалось отозвать сессию', 'error')
   } finally {
     revokingId.value = null
   }
@@ -43,7 +43,7 @@ function formatDate(dateStr: string): string {
 }
 
 function formatDevice(deviceInfo: string | null): string {
-  if (!deviceInfo) return 'Unknown device'
+  if (!deviceInfo) return 'Неизвестное устройство'
   // Извлекаем краткое название браузера/ОС из User-Agent
   if (deviceInfo.includes('Firefox')) return 'Firefox'
   if (deviceInfo.includes('Edg')) return 'Edge'
@@ -57,11 +57,11 @@ function formatDevice(deviceInfo: string | null): string {
 <template>
   <div class="space-y-3">
     <div v-if="isLoading && sessions.length === 0" class="text-sm text-slate-500">
-      Loading...
+      Загрузка...
     </div>
 
     <div v-else-if="sessions.length === 0" class="text-sm text-slate-500">
-      No active sessions found.
+      Активных сессий не найдено.
     </div>
 
     <div v-else class="space-y-2">
@@ -80,14 +80,14 @@ function formatDevice(deviceInfo: string | null): string {
               v-if="session.isCurrent"
               class="shrink-0 px-1.5 py-0.5 text-xs rounded-full font-medium bg-blue-100 text-blue-700"
             >
-              Current
+              Текущая
             </span>
           </div>
           <div class="text-xs text-slate-500">
-            {{ session.ipAddress ?? 'Unknown IP' }} · Started {{ formatDate(session.createdAt) }}
+            {{ session.ipAddress ?? 'Неизвестный IP' }} · Начата {{ formatDate(session.createdAt) }}
           </div>
           <div class="text-xs text-slate-400">
-            Expires {{ formatDate(session.expiresAt) }}
+            Истекает {{ formatDate(session.expiresAt) }}
           </div>
         </div>
 
@@ -95,9 +95,9 @@ function formatDevice(deviceInfo: string | null): string {
           v-if="!session.isCurrent"
           @click="revokeSession(session.id)"
           :disabled="revokingId === session.id"
-          class="shrink-0 ml-3 px-2.5 py-1 text-xs border border-red-200 text-red-600 hover:text-red-700 hover:border-red-300 rounded-lg transition-colors disabled:opacity-50"
+          class="shrink-0 ml-3 px-2.5 py-1 text-xs border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 rounded-lg transition-colors disabled:opacity-50"
         >
-          {{ revokingId === session.id ? 'Revoking...' : 'Revoke' }}
+          {{ revokingId === session.id ? 'Отзывается...' : 'Отозвать' }}
         </button>
       </div>
     </div>
@@ -105,9 +105,9 @@ function formatDevice(deviceInfo: string | null): string {
     <button
       @click="loadSessions"
       :disabled="isLoading"
-      class="text-xs text-slate-500 hover:text-slate-700 transition-colors disabled:opacity-50"
+      class="px-3 py-1.5 text-xs border border-slate-200 text-slate-500 hover:text-slate-700 hover:border-slate-300 rounded-lg transition-colors disabled:opacity-50"
     >
-      {{ isLoading ? 'Refreshing...' : 'Refresh' }}
+      {{ isLoading ? 'Обновление...' : 'Обновить' }}
     </button>
   </div>
 </template>

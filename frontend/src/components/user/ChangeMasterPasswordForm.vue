@@ -45,7 +45,7 @@ async function handleSubmit() {
         type="password"
         required
         :disabled="isLoading"
-        class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-400"
+        class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:bg-slate-50 disabled:text-slate-400"
         placeholder="Введите текущий мастер-пароль"
       />
     </div>
@@ -57,7 +57,7 @@ async function handleSubmit() {
         type="password"
         required
         :disabled="isLoading"
-        class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-400"
+        class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:bg-slate-50 disabled:text-slate-400"
         placeholder="Минимум 12 символов"
       />
     </div>
@@ -69,7 +69,7 @@ async function handleSubmit() {
         type="password"
         required
         :disabled="isLoading"
-        class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-400"
+        class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:bg-slate-50 disabled:text-slate-400"
         placeholder="Повторите новый мастер-пароль"
       />
     </div>
@@ -81,7 +81,7 @@ async function handleSubmit() {
       </p>
       <div class="w-full bg-slate-200 rounded-full h-1.5">
         <div
-          class="bg-blue-500 h-1.5 rounded-full transition-all"
+          class="bg-brand-500 h-1.5 rounded-full transition-all"
           :style="{ width: `${progress.total > 0 ? (progress.current / progress.total) * 100 : 0}%` }"
         />
       </div>
@@ -95,7 +95,7 @@ async function handleSubmit() {
     <button
       type="submit"
       :disabled="isLoading"
-      class="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white text-sm font-medium rounded-lg transition-colors"
+      class="w-full py-2 px-4 bg-brand-500 hover:bg-brand-600 disabled:bg-slate-400 text-white text-sm font-medium rounded-lg transition-colors"
     >
       {{ isLoading ? 'Обработка...' : 'Сменить мастер-пароль' }}
     </button>

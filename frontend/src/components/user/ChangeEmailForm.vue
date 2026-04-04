@@ -51,7 +51,7 @@ async function handleSubmit() {
         type="email"
         required
         :disabled="isLoading"
-        class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-400"
+        class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 disabled:bg-slate-50 disabled:text-slate-400"
         placeholder="new@example.com"
       />
     </div>
@@ -61,7 +61,7 @@ async function handleSubmit() {
     <button
       type="submit"
       :disabled="isLoading"
-      class="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white text-sm font-medium rounded-lg transition-colors"
+      class="w-full py-2 px-4 bg-brand-500 hover:bg-brand-600 disabled:bg-slate-400 text-white text-sm font-medium rounded-lg transition-colors"
     >
       {{ isLoading ? 'Отправка...' : 'Отправить письмо с подтверждением' }}
     </button>
