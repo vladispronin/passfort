@@ -51,6 +51,12 @@ const router = createRouter({
       meta: { requiresAuth: true, requiresUnlock: true },
     },
     {
+      path: '/security-log',
+      name: 'security-log',
+      component: () => import('../views/user/SecurityLogView.vue'),
+      meta: { requiresAuth: true, requiresUnlock: true },
+    },
+    {
       path: '/two-factor',
       name: 'two-factor',
       component: () => import('../views/auth/TwoFactorView.vue'),

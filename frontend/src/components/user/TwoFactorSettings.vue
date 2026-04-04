@@ -46,7 +46,7 @@ async function startSetup(): Promise<void> {
       await QRCode.toCanvas(qrCanvas.value, setupData.value.qr_uri, { width: 200, margin: 2 })
     }
   } catch {
-    uiStore.showToast('Failed to initialize 2FA setup', 'error')
+    uiStore.showToast('Не удалось инициализировать настройку 2FA', 'error')
   } finally {
     isLoading.value = false
   }
@@ -65,7 +65,7 @@ async function confirmEnable(): Promise<void> {
     await loadStatus()
     step.value = 'backup_codes'
   } catch (error: any) {
-    const msg = error?.response?.data?.error ?? 'Invalid code. Please try again.'
+    const msg = error?.response?.data?.error ?? 'Неверный код. Попробуйте ещё раз.'
     uiStore.showToast(msg, 'error')
     confirmCode.value = ''
   } finally {
@@ -87,9 +87,9 @@ async function disable(): Promise<void> {
     await loadStatus()
     showDisableForm.value = false
     masterPasswordForAction.value = ''
-    uiStore.showToast('Two-factor authentication disabled', 'success')
+    uiStore.showToast('Двухфакторная аутентификация отключена', 'success')
   } catch (error: any) {
-    const msg = error?.response?.data?.error ?? 'Invalid password'
+    const msg = error?.response?.data?.error ?? 'Неверный пароль'
     uiStore.showToast(msg, 'error')
   } finally {
     isLoading.value = false
@@ -110,7 +110,7 @@ async function regenerateCodes(): Promise<void> {
     masterPasswordForAction.value = ''
     step.value = 'backup_codes'
   } catch (error: any) {
-    const msg = error?.response?.data?.error ?? 'Invalid password'
+    const msg = error?.response?.data?.error ?? 'Неверный пароль'
     uiStore.showToast(msg, 'error')
   } finally {
     isLoading.value = false
@@ -123,7 +123,7 @@ async function copyBackupCodes(): Promise<void> {
     copiedCodes.value = true
     setTimeout(() => { copiedCodes.value = false }, 2000)
   } catch {
-    uiStore.showToast('Failed to copy to clipboard', 'error')
+    uiStore.showToast('Не удалось скопировать в буфер обмена', 'error')
   }
 }
 
@@ -144,82 +144,75 @@ function doneWithBackupCodes(): void {
   <!-- Статус 2FA -->
   <div v-if="step === 'status'">
     <div v-if="status" class="space-y-4">
-      <div class="flex items-center justify-between">
-        <div>
-          <span class="text-sm font-medium text-slate-700">Two-Factor Authentication</span>
-          <span
-            class="ml-2 px-2 py-0.5 text-xs rounded-full font-medium"
-            :class="status.is_enabled
-              ? 'bg-green-100 text-green-700'
-              : 'bg-slate-100 text-slate-600'"
-          >
-            {{ status.is_enabled ? 'Enabled' : 'Disabled' }}
-          </span>
-        </div>
+
+      <!-- 2FA отключена -->
+      <template v-if="!status.is_enabled">
+        <p class="text-sm text-slate-500">
+          Добавьте второй фактор защиты входа через приложение-аутентификатор.
+        </p>
         <button
-          v-if="!status.is_enabled"
           @click="startSetup"
           :disabled="isLoading"
-          class="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors disabled:opacity-50"
+          class="px-4 py-2 text-sm bg-brand-500 hover:bg-brand-600 text-white rounded-lg transition-colors disabled:opacity-50"
         >
-          Enable
+          Настроить 2FA
         </button>
-      </div>
+      </template>
 
-      <!-- Управление при включённом 2FA -->
-      <template v-if="status.is_enabled">
-        <div class="text-sm text-slate-500">
-          Backup codes: {{ status.backup_codes_count }} remaining
-        </div>
+      <!-- 2FA включена -->
+      <template v-else>
+        <p class="text-sm text-slate-500">
+          Резервные коды: {{ status.backup_codes_count }} осталось
+        </p>
 
         <!-- Форма отключения -->
-        <div v-if="showDisableForm" class="mt-3 p-3 bg-red-50 rounded-lg border border-red-100 space-y-2">
-          <p class="text-sm text-red-700">Enter your master password to disable 2FA:</p>
+        <div v-if="showDisableForm" class="p-4 bg-red-50 rounded-lg border border-red-100 space-y-3">
+          <p class="text-sm text-red-700">Введите мастер-пароль для отключения 2FA:</p>
           <input
             v-model="masterPasswordForAction"
             type="password"
-            placeholder="Master password"
+            placeholder="Мастер-пароль"
             class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-400"
           />
           <div class="flex gap-2">
             <button
               @click="disable"
               :disabled="isLoading || !masterPasswordForAction"
-              class="px-3 py-1.5 text-sm bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors disabled:opacity-50"
+              class="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50"
             >
-              Confirm Disable
+              Подтвердить отключение
             </button>
             <button
               @click="showDisableForm = false; masterPasswordForAction = ''"
-              class="px-3 py-1.5 text-sm text-slate-600 hover:text-slate-800"
+              class="px-4 py-2 text-sm text-slate-500 hover:text-slate-700 transition-colors"
             >
-              Cancel
+              Отмена
             </button>
           </div>
         </div>
 
         <!-- Форма перегенерации backup-кодов -->
-        <div v-if="showRegenerateForm" class="mt-3 p-3 bg-amber-50 rounded-lg border border-amber-100 space-y-2">
-          <p class="text-sm text-amber-700">Enter your master password to regenerate backup codes:</p>
+        <div v-if="showRegenerateForm" class="p-4 bg-amber-50 rounded-lg border border-amber-100 space-y-3">
+          <p class="text-sm text-amber-700">Введите мастер-пароль для обновления резервных кодов:</p>
           <input
             v-model="masterPasswordForAction"
             type="password"
-            placeholder="Master password"
+            placeholder="Мастер-пароль"
             class="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400"
           />
           <div class="flex gap-2">
             <button
               @click="regenerateCodes"
               :disabled="isLoading || !masterPasswordForAction"
-              class="px-3 py-1.5 text-sm bg-amber-600 hover:bg-amber-500 text-white rounded-lg transition-colors disabled:opacity-50"
+              class="px-4 py-2 text-sm bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors disabled:opacity-50"
             >
-              Regenerate Codes
+              Обновить коды
             </button>
             <button
               @click="showRegenerateForm = false; masterPasswordForAction = ''"
-              class="px-3 py-1.5 text-sm text-slate-600 hover:text-slate-800"
+              class="px-4 py-2 text-sm text-slate-500 hover:text-slate-700 transition-colors"
             >
-              Cancel
+              Отмена
             </button>
           </div>
         </div>
@@ -227,39 +220,39 @@ function doneWithBackupCodes(): void {
         <div v-if="!showDisableForm && !showRegenerateForm" class="flex gap-2">
           <button
             @click="showRegenerateForm = true"
-            class="px-3 py-1.5 text-sm border border-slate-300 text-slate-600 hover:text-slate-800 rounded-lg transition-colors"
+            class="px-4 py-2 text-sm border border-slate-300 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
           >
-            Regenerate Backup Codes
+            Обновить резервные коды
           </button>
           <button
             @click="showDisableForm = true"
-            class="px-3 py-1.5 text-sm border border-red-200 text-red-600 hover:text-red-700 rounded-lg transition-colors"
+            class="px-4 py-2 text-sm border border-red-200 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
           >
-            Disable 2FA
+            Отключить 2FA
           </button>
         </div>
       </template>
     </div>
 
-    <div v-else class="text-sm text-slate-500">Loading...</div>
+    <div v-else class="text-sm text-slate-500">Загрузка...</div>
   </div>
 
   <!-- Настройка 2FA -->
   <div v-else-if="step === 'setup'" class="space-y-4">
-    <h4 class="text-sm font-medium text-slate-700">Set up Authenticator App</h4>
+    <p class="text-sm font-medium text-slate-700">Настройка приложения-аутентификатора</p>
 
     <div class="p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-3">
       <p class="text-sm text-slate-600">
-        1. Open your authenticator app (Google Authenticator, Aegis, etc.)
+        1. Откройте приложение-аутентификатор (Google Authenticator, Aegis и др.)
       </p>
       <p class="text-sm text-slate-600">
-        2. Scan the QR code:
+        2. Отсканируйте QR-код:
       </p>
       <div class="flex justify-center bg-white p-3 rounded border border-slate-200">
         <canvas ref="qrCanvas"></canvas>
       </div>
       <p class="text-sm text-slate-600">
-        Or enter the key manually:
+        Или введите ключ вручную:
       </p>
       <div class="bg-white p-3 rounded border border-slate-300 font-mono text-sm text-slate-800 break-all select-all">
         {{ setupData?.secret }}
@@ -268,7 +261,7 @@ function doneWithBackupCodes(): void {
 
     <div class="space-y-2">
       <p class="text-sm text-slate-600">
-        3. Enter the 6-digit code from your authenticator to confirm:
+        3. Введите 6-значный код из приложения для подтверждения:
       </p>
       <input
         v-model="confirmCode"
@@ -276,7 +269,7 @@ function doneWithBackupCodes(): void {
         inputmode="numeric"
         maxlength="6"
         placeholder="000000"
-        class="w-full px-4 py-2 border border-slate-300 rounded-lg text-center text-xl tracking-widest font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+        class="w-full px-4 py-2 border border-slate-300 rounded-lg text-center text-xl tracking-widest font-mono focus:outline-none focus:ring-2 focus:ring-brand-500"
       />
     </div>
 
@@ -284,15 +277,15 @@ function doneWithBackupCodes(): void {
       <button
         @click="confirmEnable"
         :disabled="isLoading || confirmCode.length !== 6"
-        class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors disabled:opacity-50"
+        class="px-4 py-2 text-sm bg-brand-500 hover:bg-brand-600 text-white rounded-lg transition-colors disabled:opacity-50"
       >
-        {{ isLoading ? 'Verifying...' : 'Enable 2FA' }}
+        {{ isLoading ? 'Проверка...' : 'Включить 2FA' }}
       </button>
       <button
         @click="cancelSetup"
-        class="px-4 py-2 text-sm text-slate-600 hover:text-slate-800"
+        class="px-4 py-2 text-sm text-slate-500 hover:text-slate-700 transition-colors"
       >
-        Cancel
+        Отмена
       </button>
     </div>
   </div>
@@ -300,8 +293,8 @@ function doneWithBackupCodes(): void {
   <!-- Backup-коды (показываются один раз) -->
   <div v-else-if="step === 'backup_codes'" class="space-y-4">
     <div class="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-      <p class="text-sm font-medium text-amber-800">Save your backup codes now!</p>
-      <p class="text-xs text-amber-700 mt-1">These codes won't be shown again. Each can only be used once.</p>
+      <p class="text-sm font-medium text-amber-800">Сохраните резервные коды прямо сейчас!</p>
+      <p class="text-xs text-amber-700 mt-1">Коды больше не будут показаны. Каждый код можно использовать только один раз.</p>
     </div>
 
     <div class="grid grid-cols-2 gap-2">
@@ -317,15 +310,15 @@ function doneWithBackupCodes(): void {
     <div class="flex gap-2">
       <button
         @click="copyBackupCodes"
-        class="px-4 py-2 text-sm border border-slate-300 text-slate-700 hover:text-slate-900 rounded-lg transition-colors"
+        class="px-4 py-2 text-sm border border-slate-300 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors"
       >
-        {{ copiedCodes ? 'Copied!' : 'Copy All' }}
+        {{ copiedCodes ? 'Скопировано!' : 'Скопировать все' }}
       </button>
       <button
         @click="doneWithBackupCodes"
-        class="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors"
+        class="px-4 py-2 text-sm bg-brand-500 hover:bg-brand-600 text-white rounded-lg transition-colors"
       >
-        Done
+        Готово
       </button>
     </div>
   </div>

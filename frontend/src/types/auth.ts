@@ -76,3 +76,19 @@ export interface Session {
   expiresAt: string
   isCurrent: boolean
 }
+
+export interface SecurityLogEntry {
+  id: number
+  action: string
+  ipAddress: string | null
+  userAgent: string | null
+  metadata: Record<string, unknown> | null
+  createdAt: string
+}
+
+export interface PaginationMeta {
+  page: number
+  limit: number
+  total: number
+  pages: number
+}
