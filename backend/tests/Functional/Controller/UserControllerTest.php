@@ -370,6 +370,126 @@ class UserControllerTest extends ApiTestCase
         $this->assertEquals(404, $this->getStatusCode());
     }
 
+    // -------------------------------------------------------------------------
+    // POST /api/v1/user/email-change
+    // -------------------------------------------------------------------------
+
+    private function createEmailChangeToken(
+        \App\Entity\User $user,
+        string $newEmail,
+        \DateTimeImmutable $expiresAt = null,
+    ): string {
+        $raw = bin2hex(random_bytes(32));
+        $hash = hash('sha256', $raw);
+
+        $user->setPendingEmail($newEmail)
+             ->setEmailChangeTokenHash($hash)
+             ->setEmailChangeTokenExpiresAt($expiresAt ?? new \DateTimeImmutable('+1 hour'));
+
+        $this->em->flush();
+
+        return $raw;
+    }
+
+    public function testRequestEmailChangeRequiresAuth(): void
+    {
+        $this->jsonRequest('POST', '/api/v1/user/email-change', ['newEmail' => 'new@example.com']);
+        $this->assertEquals(401, $this->getStatusCode());
+    }
+
+    public function testRequestEmailChangeSuccess(): void
+    {
+        $user = $this->createTestUser('emailchange@example.com', $this->masterPasswordHash);
+        $token = $this->getJwtToken($user);
+
+        $response = $this->jsonRequest('POST', '/api/v1/user/email-change', [
+            'newEmail' => 'newaddr@example.com',
+        ], $token);
+
+        $this->assertEquals(202, $this->getStatusCode());
+        $this->assertStringContainsString('Confirmation', $response['data']['message'] ?? '');
+    }
+
+    public function testRequestEmailChangeSameEmailReturns400(): void
+    {
+        $user = $this->createTestUser('samemail@example.com', $this->masterPasswordHash);
+        $token = $this->getJwtToken($user);
+
+        $this->jsonRequest('POST', '/api/v1/user/email-change', [
+            'newEmail' => 'samemail@example.com',
+        ], $token);
+
+        $this->assertEquals(400, $this->getStatusCode());
+    }
+
+    public function testRequestEmailChangeEmailAlreadyInUseReturns409(): void
+    {
+        $this->createTestUser('occupied@example.com', $this->masterPasswordHash);
+        $user2 = $this->createTestUser('requester@example.com', $this->masterPasswordHash);
+        $token = $this->getJwtToken($user2);
+
+        $this->jsonRequest('POST', '/api/v1/user/email-change', [
+            'newEmail' => 'occupied@example.com',
+        ], $token);
+
+        $this->assertEquals(409, $this->getStatusCode());
+    }
+
+    public function testRequestEmailChangeInvalidEmailReturns422(): void
+    {
+        $user = $this->createTestUser('valid@example.com', $this->masterPasswordHash);
+        $token = $this->getJwtToken($user);
+
+        $this->jsonRequest('POST', '/api/v1/user/email-change', [
+            'newEmail' => 'not-an-email',
+        ], $token);
+
+        $this->assertEquals(422, $this->getStatusCode());
+    }
+
+    // -------------------------------------------------------------------------
+    // GET /api/v1/user/email-change/confirm
+    // -------------------------------------------------------------------------
+
+    public function testConfirmEmailChangeMissingTokenReturns400(): void
+    {
+        $this->jsonRequest('GET', '/api/v1/user/email-change/confirm');
+        $this->assertEquals(400, $this->getStatusCode());
+    }
+
+    public function testConfirmEmailChangeInvalidTokenReturns400(): void
+    {
+        $this->jsonRequest('GET', '/api/v1/user/email-change/confirm?token=' . str_repeat('a', 64));
+        $this->assertEquals(400, $this->getStatusCode());
+    }
+
+    public function testConfirmEmailChangeExpiredTokenReturns400(): void
+    {
+        $user = $this->createTestUser('expiredchange@example.com', $this->masterPasswordHash);
+        $rawToken = $this->createEmailChangeToken($user, 'new-expired@example.com', new \DateTimeImmutable('-1 hour'));
+
+        $this->jsonRequest('GET', '/api/v1/user/email-change/confirm?token=' . $rawToken);
+
+        $this->assertEquals(400, $this->getStatusCode());
+    }
+
+    public function testConfirmEmailChangeSuccess(): void
+    {
+        $user = $this->createTestUser('confirm-source@example.com', $this->masterPasswordHash);
+        $rawToken = $this->createEmailChangeToken($user, 'confirm-dest@example.com');
+
+        $response = $this->jsonRequest('GET', '/api/v1/user/email-change/confirm?token=' . $rawToken);
+
+        $this->assertEquals(200, $this->getStatusCode());
+        $this->assertStringContainsString('updated', strtolower($response['data']['message'] ?? ''));
+
+        // Проверяем обновление email в БД
+        $this->em->clear();
+        $updated = $this->em->getRepository(\App\Entity\User::class)->findOneBy(['email' => 'confirm-dest@example.com']);
+        $this->assertNotNull($updated);
+        $this->assertTrue($updated->isEmailVerified());
+    }
+
     public function testOldTokensInvalidatedAfterPasswordChange(): void
     {
         // Логинимся, чтобы получить реальный refresh token

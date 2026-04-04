@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional\Controller;
 
-use App\Entity\EmailVerificationToken;
 use App\Tests\Functional\ApiTestCase;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -23,18 +22,13 @@ class EmailVerificationControllerTest extends ApiTestCase
         \DateTimeImmutable $expiresAt = null,
     ): string {
         $em = static::getContainer()->get(EntityManagerInterface::class);
-        $userRepo = $em->getRepository(\App\Entity\User::class);
-        $user = $userRepo->findOneBy(['email' => $email]);
+        $user = $em->getRepository(\App\Entity\User::class)->findOneBy(['email' => $email]);
 
         $raw = bin2hex(random_bytes(32));
         $hash = hash('sha256', $raw);
 
-        $token = new EmailVerificationToken();
-        $token->setUser($user);
-        $token->setTokenHash($hash);
-        $token->setExpiresAt($expiresAt ?? new \DateTimeImmutable('+24 hours'));
-
-        $em->persist($token);
+        $user->setVerificationTokenHash($hash)
+             ->setVerificationTokenExpiresAt($expiresAt ?? new \DateTimeImmutable('+24 hours'));
         $em->flush();
 
         return $raw;

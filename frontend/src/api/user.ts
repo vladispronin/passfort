@@ -17,4 +17,13 @@ export const userApi = {
   async revokeSession(id: string): Promise<void> {
     await apiClient.delete(`/user/sessions/${id}`)
   },
+
+  async requestEmailChange(newEmail: string): Promise<void> {
+    await apiClient.post('/user/email-change', { newEmail })
+  },
+
+  async confirmEmailChange(token: string): Promise<{ message: string }> {
+    const { data } = await apiClient.get<ApiResponse<{ message: string }>>('/user/email-change/confirm', { params: { token } })
+    return data.data
+  },
 }

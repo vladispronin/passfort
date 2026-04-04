@@ -1,12 +1,15 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import ChangeMasterPasswordForm from '../../components/user/ChangeMasterPasswordForm.vue'
+import ChangeEmailForm from '../../components/user/ChangeEmailForm.vue'
 import TwoFactorSettings from '../../components/user/TwoFactorSettings.vue'
 import SessionsManager from '../../components/user/SessionsManager.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const showEmailForm = ref(false)
 </script>
 
 <template>
@@ -21,7 +24,18 @@ const authStore = useAuthStore()
       <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 space-y-4">
         <div>
           <label class="text-sm text-slate-500">Email</label>
-          <p class="font-medium text-slate-900">{{ authStore.user?.email }}</p>
+          <div class="flex items-center justify-between">
+            <p class="font-medium text-slate-900">{{ authStore.user?.email }}</p>
+            <button
+              @click="showEmailForm = !showEmailForm"
+              class="text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors"
+            >
+              {{ showEmailForm ? 'Отмена' : 'Сменить email' }}
+            </button>
+          </div>
+          <div v-if="showEmailForm" class="mt-3">
+            <ChangeEmailForm />
+          </div>
         </div>
         <div>
           <label class="text-sm text-slate-500">Account Created</label>

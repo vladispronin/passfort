@@ -48,7 +48,6 @@ abstract class ApiTestCase extends WebTestCase
             $conn->executeStatement('SET FOREIGN_KEY_CHECKS=0');
             $conn->executeStatement('DELETE FROM security_logs');
             $conn->executeStatement('DELETE FROM refresh_tokens');
-            $conn->executeStatement('DELETE FROM email_verification_tokens');
             $conn->executeStatement('DELETE FROM vault_items');
             $conn->executeStatement('DELETE FROM categories');
             $conn->executeStatement('DELETE FROM vaults');
