@@ -1,9 +1,12 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { vaultItemsApi } from '../api/vaultItems'
 import { decrypt, encrypt } from '../crypto'
 import { useAuthStore } from './auth'
-import type { VaultItem, CreateVaultItemPayload, DecryptedItemData } from '../types/vault'
+import type { VaultItem, CreateVaultItemPayload, DecryptedItemData, ItemType } from '../types/vault'
+import type { PaginationMeta } from '../types/api'
+
+const DEFAULT_LIMIT = 30
 
 export const useVaultItemsStore = defineStore('vaultItems', () => {
   const items = ref<VaultItem[]>([])
@@ -11,38 +14,37 @@ export const useVaultItemsStore = defineStore('vaultItems', () => {
   const isLoading = ref(false)
   const searchQuery = ref('')
   const selectedCategoryId = ref<string | null>(null)
-
-  const filteredItems = computed(() => {
-    let result = items.value
-
-    if (selectedCategoryId.value !== null) {
-      result = result.filter((item) => item.categoryId === selectedCategoryId.value)
-    }
-
-    if (searchQuery.value) {
-      const query = searchQuery.value.toLowerCase()
-      result = result.filter((item) => item.titleHint.toLowerCase().includes(query))
-    }
-
-    return result
-  })
+  const selectedItemType = ref<ItemType | null>(null)
+  const pagination = ref<PaginationMeta>({ total: 0, page: 1, limit: DEFAULT_LIMIT, pages: 0 })
 
   function setFilter(categoryId: string | null): void {
     selectedCategoryId.value = categoryId
   }
 
-  const favoriteItems = computed(() =>
-    items.value.filter((item) => item.isFavorite),
-  )
-
-  async function loadItems(vaultId: string): Promise<void> {
+  async function loadItems(vaultId: string, page: number = 1): Promise<void> {
     isLoading.value = true
     try {
-      items.value = await vaultItemsApi.list(vaultId)
+      const result = await vaultItemsApi.list(vaultId, {
+        type: selectedItemType.value,
+        category: selectedCategoryId.value,
+        q: searchQuery.value || undefined,
+        page,
+        limit: pagination.value.limit,
+      })
+      items.value = result.items
+      pagination.value = result.meta
       decryptedItems.value.clear()
     } finally {
       isLoading.value = false
     }
+  }
+
+  async function applyFilters(vaultId: string): Promise<void> {
+    await loadItems(vaultId, 1)
+  }
+
+  async function setPage(vaultId: string, page: number): Promise<void> {
+    await loadItems(vaultId, page)
   }
 
   async function decryptItem(item: VaultItem): Promise<DecryptedItemData> {
@@ -93,7 +95,8 @@ export const useVaultItemsStore = defineStore('vaultItems', () => {
     }
 
     const item = await vaultItemsApi.create(vaultId, payload)
-    items.value.push(item)
+    items.value.unshift(item)
+    pagination.value.total += 1
     return item
   }
 
@@ -135,6 +138,7 @@ export const useVaultItemsStore = defineStore('vaultItems', () => {
     await vaultItemsApi.delete(vaultId, itemId)
     items.value = items.value.filter((i) => i.id !== itemId)
     decryptedItems.value.delete(itemId)
+    pagination.value.total = Math.max(0, pagination.value.total - 1)
   }
 
   async function toggleFavorite(vaultId: string, itemId: string): Promise<void> {
@@ -148,6 +152,8 @@ export const useVaultItemsStore = defineStore('vaultItems', () => {
     decryptedItems.value.clear()
     searchQuery.value = ''
     selectedCategoryId.value = null
+    selectedItemType.value = null
+    pagination.value = { total: 0, page: 1, limit: DEFAULT_LIMIT, pages: 0 }
   }
 
   return {
@@ -155,9 +161,11 @@ export const useVaultItemsStore = defineStore('vaultItems', () => {
     isLoading,
     searchQuery,
     selectedCategoryId,
-    filteredItems,
-    favoriteItems,
+    selectedItemType,
+    pagination,
     loadItems,
+    applyFilters,
+    setPage,
     decryptItem,
     createItem,
     updateItem,

@@ -1,6 +1,13 @@
+export interface PaginationMeta {
+  total: number
+  page: number
+  limit: number
+  pages: number
+}
+
 export interface ApiResponse<T> {
   data: T
-  meta?: Record<string, unknown>
+  meta?: PaginationMeta | Record<string, unknown>
 }
 
 export interface ApiError {

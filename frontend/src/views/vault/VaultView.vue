@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useVaultStore } from '../../stores/vault'
 import { useVaultItemsStore } from '../../stores/vaultItems'
@@ -9,6 +9,7 @@ import { useAutoLock } from '../../composables/useAutoLock'
 import { useUiStore } from '../../stores/ui'
 import CategoryModal from '../../components/category/CategoryModal.vue'
 import type { Category } from '../../types/category'
+import type { ItemType } from '../../types/vault'
 
 useAutoLock()
 
@@ -22,6 +23,17 @@ const router = useRouter()
 const isLoadingVault = ref(true)
 const modalCategory = ref<Category | undefined>(undefined)
 const showCategoryModal = ref(false)
+
+const TYPE_LABELS: Record<ItemType | 'all', string> = {
+  all: 'Все',
+  login: 'Login',
+  note: 'Note',
+  card: 'Card',
+  identity: 'Identity',
+}
+const TYPE_OPTIONS = Object.entries(TYPE_LABELS) as [ItemType | 'all', string][]
+
+let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
 
 onMounted(async () => {
   try {
@@ -39,22 +51,12 @@ onMounted(async () => {
   }
 })
 
-const itemCountByCategory = computed(() => {
-  const counts = new Map<string, number>()
-  for (const item of itemsStore.items) {
-    if (item.categoryId) {
-      counts.set(item.categoryId, (counts.get(item.categoryId) ?? 0) + 1)
-    }
-  }
-  return counts
-})
-
-const categoryById = computed(() => {
-  const map = new Map<string, Category>()
-  for (const cat of categoriesStore.categories) {
-    map.set(cat.id, cat)
-  }
-  return map
+watch(() => itemsStore.searchQuery, () => {
+  if (!vaultStore.currentVaultId) return
+  if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
+  searchDebounceTimer = setTimeout(() => {
+    itemsStore.applyFilters(vaultStore.currentVaultId!)
+  }, 300)
 })
 
 function openItem(id: string) {
@@ -63,6 +65,21 @@ function openItem(id: string) {
 
 function selectCategory(categoryId: string | null) {
   itemsStore.setFilter(categoryId)
+  if (vaultStore.currentVaultId) {
+    itemsStore.applyFilters(vaultStore.currentVaultId)
+  }
+}
+
+function selectItemType(type: ItemType | 'all') {
+  itemsStore.selectedItemType = type === 'all' ? null : type
+  if (vaultStore.currentVaultId) {
+    itemsStore.applyFilters(vaultStore.currentVaultId)
+  }
+}
+
+function goToPage(page: number) {
+  if (!vaultStore.currentVaultId) return
+  itemsStore.setPage(vaultStore.currentVaultId, page)
 }
 
 function openCreateModal() {
@@ -86,6 +103,9 @@ function onModalDeleted(deletedId: string) {
   uiStore.showToast('Категория удалена', 'success')
   if (itemsStore.selectedCategoryId === deletedId) {
     itemsStore.setFilter(null)
+    if (vaultStore.currentVaultId) {
+      itemsStore.applyFilters(vaultStore.currentVaultId)
+    }
   }
 }
 </script>
@@ -134,7 +154,6 @@ function onModalDeleted(deletedId: string) {
                 <span>&#128194;</span>
                 <span>Все</span>
               </span>
-              <span class="text-xs text-slate-400">{{ itemsStore.items.length }}</span>
             </button>
 
             <div v-if="categoriesStore.categories.length" class="border-t border-slate-100 my-1" />
@@ -156,15 +175,12 @@ function onModalDeleted(deletedId: string) {
                 />
                 <span class="truncate">{{ cat.icon ? cat.icon + ' ' : '' }}{{ cat.name }}</span>
               </span>
-              <span class="flex items-center gap-1 shrink-0">
-                <span class="text-xs text-slate-400">{{ itemCountByCategory.get(cat.id) ?? 0 }}</span>
-                <span
-                  @click="openEditModal(cat, $event)"
-                  class="text-slate-300 hover:text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-xs ml-1"
-                  title="Редактировать"
-                >
-                  &#9998;
-                </span>
+              <span
+                @click="openEditModal(cat, $event)"
+                class="text-slate-300 hover:text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-xs ml-1 shrink-0"
+                title="Редактировать"
+              >
+                &#9998;
               </span>
             </button>
 
@@ -183,13 +199,39 @@ function onModalDeleted(deletedId: string) {
 
         <!-- Список записей -->
         <div class="flex-1 min-w-0">
-          <div v-if="itemsStore.filteredItems.length === 0" class="text-center py-12">
+          <!-- Фильтр по типу + счётчик -->
+          <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <div class="flex gap-1.5 flex-wrap">
+              <button
+                v-for="[type, label] in TYPE_OPTIONS"
+                :key="type"
+                @click="selectItemType(type)"
+                class="px-3 py-1 rounded-full text-xs font-medium transition-colors"
+                :class="(type === 'all' && itemsStore.selectedItemType === null) || itemsStore.selectedItemType === type
+                  ? 'bg-brand-500 text-white'
+                  : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'"
+              >
+                {{ label }}
+              </button>
+            </div>
+            <span class="text-xs text-slate-400">
+              Найдено: {{ itemsStore.pagination.total }}
+            </span>
+          </div>
+
+          <div v-if="itemsStore.isLoading" class="text-center py-12 text-slate-400">
+            Загрузка...
+          </div>
+
+          <div v-else-if="itemsStore.items.length === 0" class="text-center py-12">
             <div class="text-4xl mb-4">&#128205;</div>
             <p class="text-slate-500">
-              {{ itemsStore.selectedCategoryId ? 'В этой категории нет записей.' : 'Нет записей. Добавьте первый пароль!' }}
+              {{ itemsStore.selectedCategoryId || itemsStore.selectedItemType || itemsStore.searchQuery
+                ? 'Записей по заданным фильтрам не найдено.'
+                : 'Нет записей. Добавьте первый пароль!' }}
             </p>
             <router-link
-              v-if="!itemsStore.selectedCategoryId"
+              v-if="!itemsStore.selectedCategoryId && !itemsStore.selectedItemType && !itemsStore.searchQuery"
               to="/vault/item/new"
               class="mt-4 inline-block px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 text-sm font-medium transition-colors"
             >
@@ -197,30 +239,58 @@ function onModalDeleted(deletedId: string) {
             </router-link>
           </div>
 
-          <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div v-else>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div
+                v-for="item in itemsStore.items"
+                :key="item.id"
+                @click="openItem(item.id)"
+                class="bg-white p-4 rounded-xl shadow-sm cursor-pointer hover:shadow-md transition-shadow border border-slate-100"
+              >
+                <div class="flex items-center justify-between">
+                  <span class="font-medium text-slate-900 truncate">{{ item.titleHint }}</span>
+                  <span v-if="item.isFavorite" class="text-yellow-400 ml-2 shrink-0">&#9733;</span>
+                </div>
+                <div class="mt-2 flex items-center gap-2 flex-wrap">
+                  <span class="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full">
+                    {{ item.itemType }}
+                  </span>
+                  <span
+                    v-if="item.categoryId"
+                    class="text-xs px-2 py-0.5 rounded-full text-white font-medium"
+                    :style="{ backgroundColor: categoriesStore.categories.find(c => c.id === item.categoryId)?.color ?? '#6b7280' }"
+                  >
+                    {{ categoriesStore.categories.find(c => c.id === item.categoryId)?.icon
+                      ? categoriesStore.categories.find(c => c.id === item.categoryId)?.icon + ' '
+                      : '' }}
+                    {{ categoriesStore.categories.find(c => c.id === item.categoryId)?.name }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Пагинация -->
             <div
-              v-for="item in itemsStore.filteredItems"
-              :key="item.id"
-              @click="openItem(item.id)"
-              class="bg-white p-4 rounded-xl shadow-sm cursor-pointer hover:shadow-md transition-shadow border border-slate-100"
+              v-if="itemsStore.pagination.pages > 1"
+              class="flex items-center justify-center gap-2 mt-6"
             >
-              <div class="flex items-center justify-between">
-                <span class="font-medium text-slate-900 truncate">{{ item.titleHint }}</span>
-                <span v-if="item.isFavorite" class="text-yellow-400 ml-2 shrink-0">&#9733;</span>
-              </div>
-              <div class="mt-2 flex items-center gap-2 flex-wrap">
-                <span class="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full">
-                  {{ item.itemType }}
-                </span>
-                <span
-                  v-if="item.categoryId && categoryById.get(item.categoryId)"
-                  class="text-xs px-2 py-0.5 rounded-full text-white font-medium"
-                  :style="{ backgroundColor: categoryById.get(item.categoryId)?.color ?? '#6b7280' }"
-                >
-                  {{ categoryById.get(item.categoryId)?.icon ? categoryById.get(item.categoryId)?.icon + ' ' : '' }}
-                  {{ categoryById.get(item.categoryId)?.name }}
-                </span>
-              </div>
+              <button
+                @click="goToPage(itemsStore.pagination.page - 1)"
+                :disabled="itemsStore.pagination.page <= 1"
+                class="px-3 py-1.5 rounded-lg text-sm border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                ← Назад
+              </button>
+              <span class="text-sm text-slate-500 px-2">
+                {{ itemsStore.pagination.page }} / {{ itemsStore.pagination.pages }}
+              </span>
+              <button
+                @click="goToPage(itemsStore.pagination.page + 1)"
+                :disabled="itemsStore.pagination.page >= itemsStore.pagination.pages"
+                class="px-3 py-1.5 rounded-lg text-sm border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                Вперёд →
+              </button>
             </div>
           </div>
         </div>

@@ -6,11 +6,13 @@ namespace App\Controller;
 
 use App\DTO\Vault\CreateVaultItemDTO;
 use App\Entity\User;
+use App\Entity\VaultItem;
 use App\Service\Vault\VaultItemService;
 use App\Service\Vault\VaultService;
 use App\Trait\ApiResponseTrait;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -43,7 +45,7 @@ class VaultItemController extends AbstractController
     }
 
     #[Route('', methods: ['GET'])]
-    public function list(string $vaultId): JsonResponse
+    public function list(string $vaultId, Request $request): JsonResponse
     {
         /** @var User $user */
         $user = $this->getUser();
@@ -54,8 +56,37 @@ class VaultItemController extends AbstractController
             return $this->errorResponse('Vault not found', 404);
         }
 
-        $items = $this->itemService->findByVault($vault);
-        return $this->successResponse(array_map($this->formatItem(...), $items));
+        $allowedTypes = [VaultItem::TYPE_LOGIN, VaultItem::TYPE_NOTE, VaultItem::TYPE_CARD, VaultItem::TYPE_IDENTITY];
+        $typeParam = $request->query->getString('type');
+        $type = in_array($typeParam, $allowedTypes, true) ? $typeParam : null;
+
+        $q = trim($request->query->getString('q'));
+        $q = $q !== '' ? mb_substr($q, 0, 255) : null;
+
+        $categoryId = $request->query->getString('category') ?: null;
+        $favorite   = $request->query->getString('favorite') === 'true';
+
+        $page  = max(1, $request->query->getInt('page', 1));
+        $limit = min(100, max(1, $request->query->getInt('limit', 30)));
+
+        $filters = array_filter([
+            'type'       => $type,
+            'categoryId' => $categoryId,
+            'q'          => $q,
+            'favorite'   => $favorite ?: null,
+        ]);
+
+        $result = $this->itemService->findByVaultFiltered($vault, $filters, $page, $limit);
+
+        return $this->successResponse(
+            array_map($this->formatItem(...), $result['items']),
+            [
+                'total' => $result['total'],
+                'page'  => $page,
+                'limit' => $limit,
+                'pages' => $result['total'] > 0 ? (int) ceil($result['total'] / $limit) : 0,
+            ]
+        );
     }
 
     #[Route('', methods: ['POST'])]

@@ -48,6 +48,14 @@ class VaultItemService
         return $this->repository->findByVault($vault);
     }
 
+    /**
+     * @return array{items: \App\Entity\VaultItem[], total: int}
+     */
+    public function findByVaultFiltered(Vault $vault, array $filters, int $page, int $limit): array
+    {
+        return $this->repository->findByVaultWithFilters($vault, $filters, $page, $limit);
+    }
+
     public function findByIdAndVault(string $id, Vault $vault): VaultItem
     {
         $item = $this->repository->find($id);

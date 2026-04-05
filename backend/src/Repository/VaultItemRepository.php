@@ -23,6 +23,48 @@ class VaultItemRepository extends ServiceEntityRepository
         return $this->findBy(['vault' => $vault]);
     }
 
+    /**
+     * @return array{items: VaultItem[], total: int}
+     */
+    public function findByVaultWithFilters(Vault $vault, array $filters, int $page, int $limit): array
+    {
+        $qb = $this->createQueryBuilder('vi')
+            ->where('vi.vault = :vault')
+            ->setParameter('vault', $vault->getId(), UuidType::NAME);
+
+        if (!empty($filters['type'])) {
+            $qb->andWhere('vi.itemType = :type')
+               ->setParameter('type', $filters['type']);
+        }
+
+        if (!empty($filters['categoryId'])) {
+            $qb->andWhere('vi.category = :category')
+               ->setParameter('category', $filters['categoryId'], UuidType::NAME);
+        }
+
+        if (!empty($filters['q'])) {
+            $qb->andWhere('vi.titleHint LIKE :q')
+               ->setParameter('q', '%' . $filters['q'] . '%');
+        }
+
+        if (!empty($filters['favorite'])) {
+            $qb->andWhere('vi.isFavorite = true');
+        }
+
+        $countQb = clone $qb;
+        $total = (int) $countQb->select('COUNT(vi.id)')->getQuery()->getSingleScalarResult();
+
+        $items = $qb
+            ->select('vi')
+            ->setFirstResult(($page - 1) * $limit)
+            ->setMaxResults($limit)
+            ->orderBy('vi.createdAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+
+        return ['items' => $items, 'total' => $total];
+    }
+
     public function findFavoritesByVault(Vault $vault): array
     {
         return $this->findBy(['vault' => $vault, 'isFavorite' => true]);

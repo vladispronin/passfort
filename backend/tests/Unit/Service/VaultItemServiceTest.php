@@ -51,6 +51,23 @@ class VaultItemServiceTest extends TestCase
         $this->assertFalse($item->isFavorite());
     }
 
+    public function testFindByVaultFiltered(): void
+    {
+        $vault = new Vault();
+        $filters = ['type' => 'login', 'q' => 'github'];
+        $expectedResult = ['items' => [], 'total' => 0];
+
+        $this->repository
+            ->expects($this->once())
+            ->method('findByVaultWithFilters')
+            ->with($vault, $filters, 1, 30)
+            ->willReturn($expectedResult);
+
+        $result = $this->service->findByVaultFiltered($vault, $filters, 1, 30);
+
+        $this->assertSame($expectedResult, $result);
+    }
+
     public function testToggleFavorite(): void
     {
         $item = new VaultItem();
