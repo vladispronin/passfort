@@ -37,7 +37,22 @@ export function useMasterPasswordChange() {
 
       // 3. Загрузка всех записей из всех vault'ов
       const vaults = await vaultApi.list()
-      const allItems = (await Promise.all(vaults.map((v) => vaultItemsApi.list(v.id)))).flat()
+      const allItems = (
+        await Promise.all(
+          vaults.map(async (v) => {
+            const collected = []
+            let page = 1
+            let pages = 1
+            do {
+              const result = await vaultItemsApi.list(v.id, { page, limit: 100 })
+              collected.push(...result.items)
+              pages = result.meta.pages
+              page++
+            } while (page <= pages)
+            return collected
+          }),
+        )
+      ).flat()
       progress.value.total = allItems.length
 
       // 4. Перешифровывание каждой записи
