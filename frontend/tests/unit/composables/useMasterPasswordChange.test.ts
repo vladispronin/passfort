@@ -88,7 +88,7 @@ describe('useMasterPasswordChange', () => {
 
     // Мокируем API
     vi.mocked(vaultApi.list).mockResolvedValue([{ id: 'vault-1', name: 'Test', createdAt: '', updatedAt: '' }])
-    vi.mocked(vaultItemsApi.list).mockResolvedValue([fakeItem])
+    vi.mocked(vaultItemsApi.list).mockResolvedValue({ items: [fakeItem], meta: { total: 1, page: 1, limit: 100, pages: 1 } })
     vi.mocked(userApi.changeMasterPassword).mockResolvedValue(fakeTokens)
     vi.mocked(authApi.getMe).mockResolvedValue(fakeProfile)
 
@@ -144,7 +144,7 @@ describe('useMasterPasswordChange', () => {
     vi.mocked(decrypt).mockResolvedValue('{}')
     vi.mocked(encrypt).mockResolvedValue({ encryptedData: 'enc', iv: 'iviv', authTag: 'tag' })
     vi.mocked(vaultApi.list).mockResolvedValue([{ id: 'v1', name: 'V1', createdAt: '', updatedAt: '' }])
-    vi.mocked(vaultItemsApi.list).mockResolvedValue([fakeItem, { ...fakeItem, id: 'item-2' }])
+    vi.mocked(vaultItemsApi.list).mockResolvedValue({ items: [fakeItem, { ...fakeItem, id: 'item-2' }], meta: { total: 2, page: 1, limit: 100, pages: 1 } })
     vi.mocked(userApi.changeMasterPassword).mockResolvedValue(fakeTokens)
     vi.mocked(authApi.getMe).mockResolvedValue(fakeProfile)
 
@@ -165,7 +165,7 @@ describe('useMasterPasswordChange', () => {
     vi.mocked(deriveEncryptionKey).mockResolvedValue(fakeNewKey)
     vi.mocked(generateSalt).mockReturnValue('newSalt44chars============================')
     vi.mocked(vaultApi.list).mockResolvedValue([{ id: 'v1', name: 'V1', createdAt: '', updatedAt: '' }])
-    vi.mocked(vaultItemsApi.list).mockResolvedValue([])
+    vi.mocked(vaultItemsApi.list).mockResolvedValue({ items: [], meta: { total: 0, page: 1, limit: 100, pages: 0 } })
     vi.mocked(userApi.changeMasterPassword).mockRejectedValue(new Error('Network error'))
 
     const { changeMasterPassword, error, isLoading } = useMasterPasswordChange()
