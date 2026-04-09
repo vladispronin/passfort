@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useVaultStore } from '../../stores/vault'
 import { useVaultItemsStore } from '../../stores/vaultItems'
@@ -24,12 +24,118 @@ const isLoadingVault = ref(true)
 const modalCategory = ref<Category | undefined>(undefined)
 const showCategoryModal = ref(false)
 
+// Режим выделения
+const selectionMode = ref(false)
+const selectedIds = ref<Set<string>>(new Set())
+const selectAllPages = ref(false)
+const showMoveDropdown = ref(false)
+const isBulkLoading = ref(false)
+
+const selectedCount = computed(() =>
+  selectAllPages.value ? itemsStore.pagination.total : selectedIds.value.size,
+)
+const allSelected = computed(
+  () => itemsStore.items.length > 0 && itemsStore.items.every((i) => selectedIds.value.has(i.id)),
+)
+// Баннер: вся страница выделена, но есть ещё страницы и режим "все" не активен
+const showSelectAllBanner = computed(
+  () =>
+    allSelected.value &&
+    !selectAllPages.value &&
+    itemsStore.pagination.total > itemsStore.items.length,
+)
+
+function toggleSelectionMode() {
+  selectionMode.value = !selectionMode.value
+  if (!selectionMode.value) {
+    selectedIds.value = new Set()
+    selectAllPages.value = false
+    showMoveDropdown.value = false
+  }
+}
+
+function toggleItemSelection(id: string) {
+  selectAllPages.value = false
+  const updated = new Set(selectedIds.value)
+  if (updated.has(id)) {
+    updated.delete(id)
+  } else {
+    updated.add(id)
+  }
+  selectedIds.value = updated
+}
+
+function toggleSelectAll() {
+  if (selectAllPages.value || allSelected.value) {
+    selectedIds.value = new Set()
+    selectAllPages.value = false
+  } else {
+    selectedIds.value = new Set(itemsStore.items.map((i) => i.id))
+  }
+}
+
+function activateSelectAllPages() {
+  selectAllPages.value = true
+}
+
+async function resolveIds(): Promise<string[]> {
+  if (selectAllPages.value && vaultStore.currentVaultId) {
+    return await itemsStore.fetchAllIds(vaultStore.currentVaultId)
+  }
+  return Array.from(selectedIds.value)
+}
+
+async function handleBulkDelete() {
+  if (selectedCount.value === 0) return
+  if (!vaultStore.currentVaultId) return
+  isBulkLoading.value = true
+  try {
+    const ids = await resolveIds()
+    const deleted = await itemsStore.bulkDeleteItems(vaultStore.currentVaultId, ids)
+    selectedIds.value = new Set()
+    selectAllPages.value = false
+    uiStore.showToast(`Удалено: ${deleted}`, 'success')
+  } catch {
+    uiStore.showToast('Ошибка при удалении', 'error')
+  } finally {
+    isBulkLoading.value = false
+  }
+}
+
+async function handleBulkMove(categoryId: string | null) {
+  if (selectedCount.value === 0) return
+  if (!vaultStore.currentVaultId) return
+  isBulkLoading.value = true
+  showMoveDropdown.value = false
+  try {
+    const ids = await resolveIds()
+    const moved = await itemsStore.bulkMoveItems(vaultStore.currentVaultId, ids, categoryId)
+    selectedIds.value = new Set()
+    selectAllPages.value = false
+    const label = categoryId
+      ? categoriesStore.categories.find((c) => c.id === categoryId)?.name ?? 'категорию'
+      : 'без категории'
+    uiStore.showToast(`Перемещено в: ${label} (${moved})`, 'success')
+  } catch {
+    uiStore.showToast('Ошибка при перемещении', 'error')
+  } finally {
+    isBulkLoading.value = false
+  }
+}
+
 const TYPE_LABELS: Record<ItemType | 'all', string> = {
   all: 'Все',
-  login: 'Login',
-  note: 'Note',
-  card: 'Card',
-  identity: 'Identity',
+  login: 'Логин',
+  note: 'Заметка',
+  card: 'Карта',
+  identity: 'Личные данные',
+}
+
+const ITEM_TYPE_LABEL: Record<string, string> = {
+  login: 'Логин',
+  note: 'Заметка',
+  card: 'Карта',
+  identity: 'Личные данные',
 }
 const TYPE_OPTIONS = Object.entries(TYPE_LABELS) as [ItemType | 'all', string][]
 
@@ -176,6 +282,20 @@ function onModalDeleted(deletedId: string) {
               </span>
             </button>
 
+            <!-- Без категории -->
+            <button
+              @click="selectCategory('none')"
+              class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors"
+              :class="itemsStore.selectedCategoryId === 'none'
+                ? 'bg-brand-50 text-brand-700 font-medium'
+                : 'text-slate-700 hover:bg-slate-50'"
+            >
+              <span class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-slate-300 shrink-0 ml-px" />
+                <span>Без категории</span>
+              </span>
+            </button>
+
             <div v-if="categoriesStore.categories.length" class="border-t border-slate-100 my-1" />
 
             <!-- Список категорий -->
@@ -219,25 +339,81 @@ function onModalDeleted(deletedId: string) {
 
         <!-- Список записей -->
         <div class="flex-1 min-w-0">
-          <!-- Фильтр по типу + счётчик -->
+          <!-- Фильтр по типу + режим выделения + счётчик -->
           <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
-            <div class="flex gap-1.5 flex-wrap">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <template v-if="selectionMode">
+                <button
+                  @click="toggleSelectAll"
+                  class="px-3 py-1 rounded-full text-xs font-medium transition-colors border"
+                  :class="allSelected
+                    ? 'bg-brand-500 text-white border-brand-500'
+                    : 'bg-white text-slate-600 hover:bg-slate-100 border-slate-200'"
+                >
+                  {{ allSelected ? 'Снять всё' : 'Выбрать всё' }}
+                </button>
+              </template>
+              <template v-else>
+                <button
+                  v-for="[type, label] in TYPE_OPTIONS"
+                  :key="type"
+                  @click="selectItemType(type)"
+                  class="px-3 py-1 rounded-full text-xs font-medium transition-colors"
+                  :class="(type === 'all' && itemsStore.selectedItemType === null) || itemsStore.selectedItemType === type
+                    ? 'bg-brand-500 text-white'
+                    : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'"
+                >
+                  {{ label }}
+                </button>
+              </template>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="text-xs" :class="selectAllPages ? 'text-brand-600 font-medium' : 'text-slate-400'">
+                {{ selectionMode ? `Выбрано: ${selectedCount}` : `Найдено: ${itemsStore.pagination.total}` }}
+              </span>
               <button
-                v-for="[type, label] in TYPE_OPTIONS"
-                :key="type"
-                @click="selectItemType(type)"
-                class="px-3 py-1 rounded-full text-xs font-medium transition-colors"
-                :class="(type === 'all' && itemsStore.selectedItemType === null) || itemsStore.selectedItemType === type
-                  ? 'bg-brand-500 text-white'
-                  : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'"
+                @click="toggleSelectionMode"
+                class="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-colors"
+                :class="selectionMode
+                  ? 'bg-brand-50 text-brand-700 border-brand-300 hover:bg-brand-100'
+                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-900'"
               >
-                {{ label }}
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                {{ selectionMode ? 'Отменить выделение' : 'Выделить' }}
               </button>
             </div>
-            <span class="text-xs text-slate-400">
-              Найдено: {{ itemsStore.pagination.total }}
-            </span>
           </div>
+
+          <!-- Баннер "выделить все страницы" -->
+          <Transition name="fade">
+            <div
+              v-if="showSelectAllBanner || (selectionMode && selectAllPages)"
+              class="mb-3 flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm"
+              :class="selectAllPages
+                ? 'bg-brand-50 border border-brand-200 text-brand-700'
+                : 'bg-amber-50 border border-amber-200 text-amber-800'"
+            >
+              <template v-if="!selectAllPages">
+                <span>Выделены {{ itemsStore.items.length }} записей на странице.</span>
+                <button
+                  @click="activateSelectAllPages"
+                  class="font-medium underline underline-offset-2 hover:no-underline"
+                >
+                  Выделить все {{ itemsStore.pagination.total }}?
+                </button>
+              </template>
+              <template v-else>
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <span>Выделены все {{ itemsStore.pagination.total }} записей.</span>
+                <button
+                  @click="toggleSelectAll"
+                  class="font-medium underline underline-offset-2 hover:no-underline"
+                >
+                  Отменить выделение всех
+                </button>
+              </template>
+            </div>
+          </Transition>
 
           <div v-if="itemsStore.isLoading" class="text-center py-12 text-slate-400">
             Загрузка...
@@ -264,16 +440,28 @@ function onModalDeleted(deletedId: string) {
               <div
                 v-for="item in itemsStore.items"
                 :key="item.id"
-                @click="openItem(item.id)"
-                class="bg-white p-4 rounded-xl shadow-sm cursor-pointer hover:shadow-md transition-shadow border border-slate-100"
+                @click="selectionMode ? toggleItemSelection(item.id) : openItem(item.id)"
+                class="bg-white p-4 rounded-xl shadow-sm cursor-pointer transition-all border"
+                :class="selectionMode && selectedIds.has(item.id)
+                  ? 'border-brand-400 ring-2 ring-brand-200 shadow-md'
+                  : 'border-slate-100 hover:shadow-md'"
               >
                 <div class="flex items-center justify-between">
-                  <span class="font-medium text-slate-900 truncate">{{ item.titleHint }}</span>
+                  <div class="flex items-center gap-2 min-w-0">
+                    <input
+                      v-if="selectionMode"
+                      type="checkbox"
+                      :checked="selectedIds.has(item.id)"
+                      @click.stop="toggleItemSelection(item.id)"
+                      class="w-4 h-4 rounded border-slate-300 text-brand-500 focus:ring-brand-400 shrink-0"
+                    />
+                    <span class="font-medium text-slate-900 truncate">{{ item.titleHint }}</span>
+                  </div>
                   <span v-if="item.isFavorite" class="text-yellow-400 ml-2 shrink-0">&#9733;</span>
                 </div>
                 <div class="mt-2 flex items-center gap-2 flex-wrap">
                   <span class="text-xs px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full">
-                    {{ item.itemType }}
+                    {{ ITEM_TYPE_LABEL[item.itemType] ?? item.itemType }}
                   </span>
                   <span
                     v-if="item.categoryId"
@@ -317,13 +505,75 @@ function onModalDeleted(deletedId: string) {
       </div>
     </main>
 
-    <!-- FAB: новая запись -->
+    <!-- FAB: новая запись (скрыт в режиме выделения) -->
     <router-link
+      v-if="!selectionMode"
       to="/vault/item/new"
       class="fixed bottom-8 right-8 w-14 h-14 bg-brand-500 text-white rounded-full shadow-lg flex items-center justify-center text-2xl hover:bg-brand-600 transition-colors"
     >
       +
     </router-link>
+
+    <!-- Панель bulk-действий -->
+    <Transition name="slide-up">
+      <div
+        v-if="selectionMode && selectedCount > 0"
+        class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-lg px-4 py-3 flex items-center justify-between gap-3 z-50"
+      >
+        <span class="text-sm text-slate-600 font-medium shrink-0">
+          Выбрано: {{ selectedCount }}
+        </span>
+
+        <div class="flex items-center gap-2">
+          <!-- Переместить в категорию -->
+          <div class="relative">
+            <button
+              @click="showMoveDropdown = !showMoveDropdown"
+              :disabled="isBulkLoading"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition-colors"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg>
+              Переместить
+            </button>
+            <div
+              v-if="showMoveDropdown"
+              class="absolute bottom-full mb-2 right-0 bg-white border border-slate-200 rounded-lg shadow-lg py-1 min-w-40 z-10"
+            >
+              <button
+                @click="handleBulkMove(null)"
+                class="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+              >
+                <span class="w-2.5 h-2.5 rounded-full bg-slate-300 shrink-0" />
+                Без категории
+              </button>
+              <div v-if="categoriesStore.categories.length" class="border-t border-slate-100 my-1" />
+              <button
+                v-for="cat in categoriesStore.categories"
+                :key="cat.id"
+                @click="handleBulkMove(cat.id)"
+                class="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+              >
+                <span
+                  class="w-2.5 h-2.5 rounded-full shrink-0"
+                  :style="{ backgroundColor: cat.color ?? '#6b7280' }"
+                />
+                {{ cat.icon ? cat.icon + ' ' : '' }}{{ cat.name }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Удалить -->
+          <button
+            @click="handleBulkDelete"
+            :disabled="isBulkLoading"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm bg-rose-500 text-white hover:bg-rose-600 disabled:opacity-50 transition-colors"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            Удалить
+          </button>
+        </div>
+      </div>
+    </Transition>
 
     <!-- Модал категории -->
     <CategoryModal
@@ -335,3 +585,23 @@ function onModalDeleted(deletedId: string) {
     />
   </div>
 </template>
+
+<style scoped>
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: transform 0.2s ease;
+}
+.slide-up-enter-from,
+.slide-up-leave-to {
+  transform: translateY(100%);
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.15s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>

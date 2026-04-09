@@ -19,11 +19,11 @@ const passwordsMatch = computed(() => masterPassword.value === confirmPassword.v
 
 async function handleSubmit() {
   if (!passwordsMatch.value) {
-    uiStore.showToast('Passwords do not match', 'error')
+    uiStore.showToast('Пароли не совпадают', 'error')
     return
   }
   if (masterPassword.value.length < 12) {
-    uiStore.showToast('Master password must be at least 12 characters', 'error')
+    uiStore.showToast('Мастер-пароль должен содержать минимум 12 символов', 'error')
     return
   }
 
@@ -31,7 +31,7 @@ async function handleSubmit() {
   try {
     await register(email.value, masterPassword.value)
   } catch (error: any) {
-    const message = error?.response?.data?.error ?? 'Registration failed'
+    const message = error?.response?.data?.error ?? 'Ошибка регистрации'
     uiStore.showToast(message, 'error')
   } finally {
     isLoading.value = false
@@ -53,14 +53,14 @@ async function handleSubmit() {
       <div class="flex flex-col items-center mb-6 text-white">
         <img src="/passfort-icon.svg" alt="PassFort" class="w-14 h-14 mb-3" />
         <h1 class="text-2xl font-bold tracking-wide">PassFort</h1>
-        <p class="text-blue-200 text-sm mt-1">Your secure fortress</p>
+        <p class="text-blue-200 text-sm mt-1">Ваша надёжная крепость</p>
       </div>
 
       <div class="bg-white rounded-2xl shadow-2xl px-8 py-8">
-        <h2 class="text-xl font-semibold text-slate-800 mb-4">Create your account</h2>
+        <h2 class="text-xl font-semibold text-slate-800 mb-4">Создайте аккаунт</h2>
 
         <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800 mb-5">
-          <strong>Important:</strong> Your master password cannot be recovered. Store it safely.
+          <strong>Важно:</strong> Мастер-пароль нельзя восстановить. Сохраните его в надёжном месте.
         </div>
 
         <form @submit.prevent="handleSubmit" class="space-y-4">
@@ -75,7 +75,7 @@ async function handleSubmit() {
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-slate-700">Master Password</label>
+            <label class="block text-sm font-medium text-slate-700">Мастер-пароль</label>
             <div class="relative mt-1">
               <input
                 v-model="masterPassword"
@@ -89,18 +89,18 @@ async function handleSubmit() {
                 @click="showPassword = !showPassword"
                 class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 text-xs"
               >
-                {{ showPassword ? 'Hide' : 'Show' }}
+                {{ showPassword ? 'Скрыть' : 'Показать' }}
               </button>
             </div>
             <div v-if="masterPassword" class="mt-1">
               <span :class="strength.color" class="text-xs font-medium">
-                Strength: {{ strength.label }}
+                Надёжность: {{ strength.label }}
               </span>
             </div>
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-slate-700">Confirm Master Password</label>
+            <label class="block text-sm font-medium text-slate-700">Подтвердите мастер-пароль</label>
             <input
               v-model="confirmPassword"
               type="password"
@@ -115,13 +115,13 @@ async function handleSubmit() {
             :disabled="isLoading || !passwordsMatch"
             class="w-full py-2.5 px-4 rounded-lg text-sm font-semibold text-white bg-brand-500 hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {{ isLoading ? 'Creating account...' : 'Create Account' }}
+            {{ isLoading ? 'Создание...' : 'Создать аккаунт' }}
           </button>
         </form>
 
         <p class="mt-6 text-center text-sm text-slate-500">
-          Already have an account?
-          <router-link to="/login" class="text-brand-500 hover:text-brand-600 font-medium">Sign In</router-link>
+          Уже есть аккаунт?
+          <router-link to="/login" class="text-brand-500 hover:text-brand-600 font-medium">Войти</router-link>
         </p>
       </div>
     </div>

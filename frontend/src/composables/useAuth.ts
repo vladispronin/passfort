@@ -32,7 +32,7 @@ export function useAuth() {
       },
     })
 
-    uiStore.showToast('Account created successfully! Please log in.', 'success')
+    uiStore.showToast('Аккаунт успешно создан! Войдите в систему.', 'success')
     await router.push('/login')
   }
 
@@ -109,7 +109,7 @@ export function useAuth() {
       // Хэш не сохранён — требуем повторный логин
       authStore.clearAuth()
       await router.push('/login')
-      uiStore.showToast('Session expired, please log in again', 'info')
+      uiStore.showToast('Сессия истекла, войдите снова', 'info')
       return
     }
 

@@ -25,10 +25,16 @@ async function handleSubmit(): Promise<void> {
   isLoading.value = true
   try {
     await verifyTwoFactor(code.value.trim().toUpperCase())
-  } catch {
-    const message = isBackupMode.value
-      ? 'Invalid backup code. Please try again.'
-      : 'Invalid code. Please try again.'
+  } catch (error: any) {
+    const status = error?.response?.status
+    let message: string
+    if (status === 429) {
+      message = 'Слишком много попыток. Попробуйте позже.'
+    } else if (isBackupMode.value) {
+      message = 'Неверный резервный код. Попробуйте ещё раз.'
+    } else {
+      message = 'Неверный код. Попробуйте ещё раз.'
+    }
     uiStore.showToast(message, 'error')
     code.value = ''
   } finally {
@@ -62,9 +68,9 @@ function goBack(): void {
               d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
           </svg>
         </div>
-        <h1 class="text-2xl font-bold text-white">Two-Factor Authentication</h1>
+        <h1 class="text-2xl font-bold text-white">Двухфакторная аутентификация</h1>
         <p class="text-slate-400 text-sm mt-2">
-          {{ isBackupMode ? 'Enter a backup code' : 'Enter the 6-digit code from your authenticator app' }}
+          {{ isBackupMode ? 'Введите резервный код' : 'Введите 6-значный код из приложения-аутентификатора' }}
         </p>
       </div>
 
@@ -88,7 +94,7 @@ function goBack(): void {
             :disabled="isLoading || !code.trim()"
             class="w-full py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors"
           >
-            {{ isLoading ? 'Verifying...' : 'Verify' }}
+            {{ isLoading ? 'Проверка...' : 'Подтвердить' }}
           </button>
         </form>
 
@@ -98,14 +104,14 @@ function goBack(): void {
             @click="switchToBackup"
             class="text-sm text-slate-300 hover:text-white transition-colors"
           >
-            Use a backup code instead
+            Использовать резервный код
           </button>
           <button
             v-if="isBackupMode"
             @click="switchToTotp"
             class="text-sm text-slate-300 hover:text-white transition-colors"
           >
-            Use authenticator app instead
+            Использовать приложение-аутентификатор
           </button>
         </div>
       </div>
@@ -115,7 +121,7 @@ function goBack(): void {
           @click="goBack"
           class="text-sm text-slate-400 hover:text-slate-200 transition-colors"
         >
-          ← Back to login
+          ← Назад ко входу
         </button>
       </div>
     </div>

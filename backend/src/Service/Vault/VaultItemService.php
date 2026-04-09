@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Vault;
 
+use App\DTO\Vault\BulkDeleteDTO;
+use App\DTO\Vault\BulkMoveDTO;
 use App\DTO\Vault\CreateVaultItemDTO;
 use App\Entity\Vault;
 use App\Entity\VaultItem;
@@ -100,5 +102,38 @@ class VaultItemService
     {
         $this->em->remove($item);
         $this->em->flush();
+    }
+
+    public function bulkDelete(Vault $vault, BulkDeleteDTO $dto): int
+    {
+        $items = $this->repository->findByIdsAndVault($dto->ids, $vault);
+
+        foreach ($items as $item) {
+            $this->em->remove($item);
+        }
+        $this->em->flush();
+
+        return count($items);
+    }
+
+    public function bulkMove(Vault $vault, BulkMoveDTO $dto): int
+    {
+        $items = $this->repository->findByIdsAndVault($dto->ids, $vault);
+
+        $category = null;
+        if ($dto->categoryId !== null) {
+            $category = $this->categoryRepository->find($dto->categoryId);
+            // Категория должна принадлежать тому же хранилищу
+            if ($category === null || $category->getVault()->getId()?->toRfc4122() !== $vault->getId()?->toRfc4122()) {
+                throw new \RuntimeException('Category not found or does not belong to this vault');
+            }
+        }
+
+        foreach ($items as $item) {
+            $item->setCategory($category);
+        }
+        $this->em->flush();
+
+        return count($items);
     }
 }

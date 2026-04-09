@@ -370,6 +370,160 @@ class VaultItemControllerTest extends ApiTestCase
         $this->assertEquals(2, $responsePage2['meta']['page']);
     }
 
+    public function testBulkDeleteItems(): void
+    {
+        $ctx = $this->setupUserWithVault('itembulkdelete@example.com');
+
+        $id1 = $this->jsonRequest('POST', "/api/v1/vaults/{$ctx['vaultId']}/items", $this->validItemPayload(), $ctx['token'])['data']['id'];
+        $payload2 = $this->validItemPayload();
+        $payload2['titleHint'] = 'Item 2';
+        $id2 = $this->jsonRequest('POST', "/api/v1/vaults/{$ctx['vaultId']}/items", $payload2, $ctx['token'])['data']['id'];
+        $payload3 = $this->validItemPayload();
+        $payload3['titleHint'] = 'Item 3';
+        $this->jsonRequest('POST', "/api/v1/vaults/{$ctx['vaultId']}/items", $payload3, $ctx['token']);
+
+        $response = $this->jsonRequest(
+            'DELETE',
+            "/api/v1/vaults/{$ctx['vaultId']}/items",
+            ['ids' => [$id1, $id2]],
+            $ctx['token']
+        );
+
+        $this->assertEquals(200, $this->getStatusCode());
+        $this->assertEquals(2, $response['data']['deleted']);
+
+        $listResponse = $this->jsonRequest('GET', "/api/v1/vaults/{$ctx['vaultId']}/items", [], $ctx['token']);
+        $this->assertEquals(1, $listResponse['meta']['total']);
+    }
+
+    public function testBulkDeleteRequiresAuth(): void
+    {
+        $this->jsonRequest('DELETE', '/api/v1/vaults/some-id/items', ['ids' => ['00000000-0000-0000-0000-000000000001']]);
+        $this->assertEquals(401, $this->getStatusCode());
+    }
+
+    public function testBulkDeleteValidationFails(): void
+    {
+        $ctx = $this->setupUserWithVault('itembulkvalidate@example.com');
+
+        $response = $this->jsonRequest(
+            'DELETE',
+            "/api/v1/vaults/{$ctx['vaultId']}/items",
+            ['ids' => []],
+            $ctx['token']
+        );
+
+        $this->assertContains($this->getStatusCode(), [400, 422]);
+    }
+
+    public function testBulkDeleteIgnoresItemsFromOtherVault(): void
+    {
+        $ctx1 = $this->setupUserWithVault('itembulkother1@example.com');
+        $ctx2 = $this->setupUserWithVault('itembulkother2@example.com');
+
+        $id = $this->jsonRequest('POST', "/api/v1/vaults/{$ctx1['vaultId']}/items", $this->validItemPayload(), $ctx1['token'])['data']['id'];
+
+        // Пользователь 2 пытается удалить элемент из хранилища пользователя 1
+        $response = $this->jsonRequest(
+            'DELETE',
+            "/api/v1/vaults/{$ctx2['vaultId']}/items",
+            ['ids' => [$id]],
+            $ctx2['token']
+        );
+
+        $this->assertEquals(200, $this->getStatusCode());
+        $this->assertEquals(0, $response['data']['deleted']);
+
+        // Элемент у пользователя 1 остался
+        $listResponse = $this->jsonRequest('GET', "/api/v1/vaults/{$ctx1['vaultId']}/items", [], $ctx1['token']);
+        $this->assertEquals(1, $listResponse['meta']['total']);
+    }
+
+    public function testBulkMoveItems(): void
+    {
+        $ctx = $this->setupUserWithVault('itembulkmove@example.com');
+
+        $categoryResponse = $this->jsonRequest(
+            'POST',
+            "/api/v1/vaults/{$ctx['vaultId']}/categories",
+            ['name' => 'Work', 'color' => '#ff0000'],
+            $ctx['token']
+        );
+        $categoryId = $categoryResponse['data']['id'];
+
+        $id1 = $this->jsonRequest('POST', "/api/v1/vaults/{$ctx['vaultId']}/items", $this->validItemPayload(), $ctx['token'])['data']['id'];
+        $payload2 = $this->validItemPayload();
+        $payload2['titleHint'] = 'Item 2';
+        $id2 = $this->jsonRequest('POST', "/api/v1/vaults/{$ctx['vaultId']}/items", $payload2, $ctx['token'])['data']['id'];
+
+        $response = $this->jsonRequest(
+            'PATCH',
+            "/api/v1/vaults/{$ctx['vaultId']}/items/move",
+            ['ids' => [$id1, $id2], 'categoryId' => $categoryId],
+            $ctx['token']
+        );
+
+        $this->assertEquals(200, $this->getStatusCode());
+        $this->assertEquals(2, $response['data']['moved']);
+
+        $item1 = $this->jsonRequest('GET', "/api/v1/vaults/{$ctx['vaultId']}/items/{$id1}", [], $ctx['token']);
+        $this->assertEquals($categoryId, $item1['data']['categoryId']);
+    }
+
+    public function testBulkMoveToNullCategory(): void
+    {
+        $ctx = $this->setupUserWithVault('itembulkmovenull@example.com');
+
+        $categoryResponse = $this->jsonRequest(
+            'POST',
+            "/api/v1/vaults/{$ctx['vaultId']}/categories",
+            ['name' => 'Work', 'color' => '#ff0000'],
+            $ctx['token']
+        );
+        $categoryId = $categoryResponse['data']['id'];
+
+        $payload = $this->validItemPayload();
+        $payload['categoryId'] = $categoryId;
+        $id1 = $this->jsonRequest('POST', "/api/v1/vaults/{$ctx['vaultId']}/items", $payload, $ctx['token'])['data']['id'];
+
+        // Снять категорию
+        $response = $this->jsonRequest(
+            'PATCH',
+            "/api/v1/vaults/{$ctx['vaultId']}/items/move",
+            ['ids' => [$id1]],
+            $ctx['token']
+        );
+
+        $this->assertEquals(200, $this->getStatusCode());
+        $this->assertEquals(1, $response['data']['moved']);
+
+        $item = $this->jsonRequest('GET', "/api/v1/vaults/{$ctx['vaultId']}/items/{$id1}", [], $ctx['token']);
+        $this->assertNull($item['data']['categoryId']);
+    }
+
+    public function testBulkMoveRequiresAuth(): void
+    {
+        $this->jsonRequest('PATCH', '/api/v1/vaults/some-id/items/move', ['ids' => ['00000000-0000-0000-0000-000000000001']]);
+        $this->assertEquals(401, $this->getStatusCode());
+    }
+
+    public function testBulkMoveToInvalidCategory(): void
+    {
+        $ctx = $this->setupUserWithVault('itembulkmoveinvalid@example.com');
+
+        $id1 = $this->jsonRequest('POST', "/api/v1/vaults/{$ctx['vaultId']}/items", $this->validItemPayload(), $ctx['token'])['data']['id'];
+
+        $fakeCategoryId = '00000000-0000-0000-0000-000000000000';
+        $response = $this->jsonRequest(
+            'PATCH',
+            "/api/v1/vaults/{$ctx['vaultId']}/items/move",
+            ['ids' => [$id1], 'categoryId' => $fakeCategoryId],
+            $ctx['token']
+        );
+
+        $this->assertEquals(422, $this->getStatusCode());
+    }
+
     public function testListWithCategoryFilter(): void
     {
         $ctx = $this->setupUserWithVault('itemcatfilter@example.com');

@@ -57,10 +57,10 @@ export function usePasswordGenerator() {
     if (/[0-9]/.test(password)) score++
     if (/[^A-Za-z0-9]/.test(password)) score++
 
-    if (score <= 2) return { score, label: 'Weak', color: 'text-red-500' }
-    if (score <= 4) return { score, label: 'Fair', color: 'text-yellow-500' }
-    if (score <= 5) return { score, label: 'Strong', color: 'text-blue-500' }
-    return { score, label: 'Very Strong', color: 'text-green-500' }
+    if (score <= 2) return { score, label: 'Слабый', color: 'text-red-500' }
+    if (score <= 4) return { score, label: 'Средний', color: 'text-yellow-500' }
+    if (score <= 5) return { score, label: 'Сильный', color: 'text-blue-500' }
+    return { score, label: 'Очень сильный', color: 'text-green-500' }
   }
 
   return { options, generatedPassword, generate, getStrength }

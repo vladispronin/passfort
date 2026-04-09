@@ -18,7 +18,7 @@ async function handleSubmit() {
   try {
     await login(email.value, masterPassword.value)
   } catch (error: any) {
-    const message = error?.response?.data?.error ?? 'Login failed. Please try again.'
+    const message = error?.response?.data?.error ?? 'Не удалось войти. Попробуйте ещё раз.'
     uiStore.showToast(message, 'error')
   } finally {
     isLoading.value = false
@@ -40,11 +40,11 @@ async function handleSubmit() {
       <div class="flex flex-col items-center mb-6 text-white">
         <img src="/passfort-icon.svg" alt="PassFort" class="w-14 h-14 mb-3" />
         <h1 class="text-2xl font-bold tracking-wide">PassFort</h1>
-        <p class="text-blue-200 text-sm mt-1">Your secure fortress</p>
+        <p class="text-blue-200 text-sm mt-1">Ваша надёжная крепость</p>
       </div>
 
       <div class="bg-white rounded-2xl shadow-2xl px-8 py-8">
-        <h2 class="text-xl font-semibold text-slate-800 mb-6">Sign in to your vault</h2>
+        <h2 class="text-xl font-semibold text-slate-800 mb-6">Войдите в хранилище</h2>
 
         <form @submit.prevent="handleSubmit" class="space-y-4">
           <div>
@@ -60,7 +60,7 @@ async function handleSubmit() {
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-slate-700">Master Password</label>
+            <label class="block text-sm font-medium text-slate-700">Мастер-пароль</label>
             <div class="relative mt-1">
               <input
                 v-model="masterPassword"
@@ -68,14 +68,14 @@ async function handleSubmit() {
                 required
                 autocomplete="current-password"
                 class="block w-full px-3 py-2 pr-16 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
-                placeholder="Enter your master password"
+                placeholder="Введите мастер-пароль"
               />
               <button
                 type="button"
                 @click="showPassword = !showPassword"
                 class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 text-xs"
               >
-                {{ showPassword ? 'Hide' : 'Show' }}
+                {{ showPassword ? 'Скрыть' : 'Показать' }}
               </button>
             </div>
           </div>
@@ -85,13 +85,13 @@ async function handleSubmit() {
             :disabled="isLoading"
             class="w-full py-2.5 px-4 rounded-lg text-sm font-semibold text-white bg-brand-500 hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {{ isLoading ? 'Signing in...' : 'Sign In' }}
+            {{ isLoading ? 'Вход...' : 'Войти' }}
           </button>
         </form>
 
         <p class="mt-6 text-center text-sm text-slate-500">
-          Don't have an account?
-          <router-link to="/register" class="text-brand-500 hover:text-brand-600 font-medium">Register</router-link>
+          Нет аккаунта?
+          <router-link to="/register" class="text-brand-500 hover:text-brand-600 font-medium">Регистрация</router-link>
         </p>
       </div>
     </div>
