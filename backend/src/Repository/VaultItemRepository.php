@@ -38,8 +38,12 @@ class VaultItemRepository extends ServiceEntityRepository
         }
 
         if (!empty($filters['categoryId'])) {
-            $qb->andWhere('vi.category = :category')
-               ->setParameter('category', $filters['categoryId'], UuidType::NAME);
+            if ($filters['categoryId'] === 'none') {
+                $qb->andWhere('vi.category IS NULL');
+            } else {
+                $qb->andWhere('vi.category = :category')
+                   ->setParameter('category', $filters['categoryId'], UuidType::NAME);
+            }
         }
 
         if (!empty($filters['q'])) {
@@ -63,6 +67,29 @@ class VaultItemRepository extends ServiceEntityRepository
             ->getResult();
 
         return ['items' => $items, 'total' => $total];
+    }
+
+    /**
+     * @param string[] $ids UUID-строки элементов
+     * @return VaultItem[]
+     */
+    public function findByIdsAndVault(array $ids, Vault $vault): array
+    {
+        if (empty($ids)) {
+            return [];
+        }
+
+        $vaultId = $vault->getId()?->toRfc4122();
+        $items = [];
+
+        foreach ($ids as $id) {
+            $item = $this->find($id);
+            if ($item !== null && $item->getVault()->getId()?->toRfc4122() === $vaultId) {
+                $items[] = $item;
+            }
+        }
+
+        return $items;
     }
 
     public function findFavoritesByVault(Vault $vault): array

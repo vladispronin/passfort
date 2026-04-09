@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\DTO\Vault\BulkDeleteDTO;
+use App\DTO\Vault\BulkMoveDTO;
 use App\DTO\Vault\CreateVaultItemDTO;
 use App\Entity\User;
 use App\Entity\VaultItem;
@@ -67,7 +69,7 @@ class VaultItemController extends AbstractController
         $favorite   = $request->query->getString('favorite') === 'true';
 
         $page  = max(1, $request->query->getInt('page', 1));
-        $limit = min(100, max(1, $request->query->getInt('limit', 30)));
+        $limit = min(5000, max(1, $request->query->getInt('limit', 30)));
 
         $filters = array_filter([
             'type'       => $type,
@@ -103,6 +105,43 @@ class VaultItemController extends AbstractController
 
         $item = $this->itemService->create($vault, $dto);
         return $this->createdResponse($this->formatItem($item));
+    }
+
+    #[Route('', methods: ['DELETE'])]
+    public function bulkDelete(string $vaultId, #[MapRequestPayload] BulkDeleteDTO $dto): JsonResponse
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+
+        try {
+            $vault = $this->vaultService->findByIdAndUser($vaultId, $user);
+        } catch (\RuntimeException) {
+            return $this->errorResponse('Vault not found', 404);
+        }
+
+        $deleted = $this->itemService->bulkDelete($vault, $dto);
+        return $this->successResponse(['deleted' => $deleted]);
+    }
+
+    #[Route('/move', methods: ['PATCH'])]
+    public function bulkMove(string $vaultId, #[MapRequestPayload] BulkMoveDTO $dto): JsonResponse
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+
+        try {
+            $vault = $this->vaultService->findByIdAndUser($vaultId, $user);
+        } catch (\RuntimeException) {
+            return $this->errorResponse('Vault not found', 404);
+        }
+
+        try {
+            $moved = $this->itemService->bulkMove($vault, $dto);
+        } catch (\RuntimeException $e) {
+            return $this->errorResponse($e->getMessage(), 422);
+        }
+
+        return $this->successResponse(['moved' => $moved]);
     }
 
     #[Route('/{id}', methods: ['GET'])]

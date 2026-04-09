@@ -70,4 +70,20 @@ export const vaultItemsApi = {
     )
     return data.data
   },
+
+  async bulkDelete(vaultId: string, ids: string[]): Promise<number> {
+    const { data } = await apiClient.delete<ApiResponse<{ deleted: number }>>(
+      `/vaults/${vaultId}/items`,
+      { data: { ids } },
+    )
+    return data.data.deleted
+  },
+
+  async bulkMove(vaultId: string, ids: string[], categoryId: string | null): Promise<number> {
+    const { data } = await apiClient.patch<ApiResponse<{ moved: number }>>(
+      `/vaults/${vaultId}/items/move`,
+      { ids, categoryId },
+    )
+    return data.data.moved
+  },
 }

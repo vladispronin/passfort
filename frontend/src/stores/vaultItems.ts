@@ -147,6 +147,37 @@ export const useVaultItemsStore = defineStore('vaultItems', () => {
     if (index !== -1) items.value[index] = updated
   }
 
+  async function fetchAllIds(vaultId: string): Promise<string[]> {
+    const result = await vaultItemsApi.list(vaultId, {
+      type: selectedItemType.value,
+      category: selectedCategoryId.value,
+      q: searchQuery.value || undefined,
+      page: 1,
+      limit: 5000,
+    })
+    return result.items.map((i) => i.id)
+  }
+
+  async function bulkDeleteItems(vaultId: string, ids: string[]): Promise<number> {
+    const deleted = await vaultItemsApi.bulkDelete(vaultId, ids)
+    items.value = items.value.filter((i) => !ids.includes(i.id))
+    ids.forEach((id) => decryptedItems.value.delete(id))
+    pagination.value.total = Math.max(0, pagination.value.total - deleted)
+    return deleted
+  }
+
+  async function bulkMoveItems(
+    vaultId: string,
+    ids: string[],
+    categoryId: string | null,
+  ): Promise<number> {
+    const moved = await vaultItemsApi.bulkMove(vaultId, ids, categoryId)
+    items.value = items.value.map((item) =>
+      ids.includes(item.id) ? { ...item, categoryId: categoryId ?? undefined } : item,
+    )
+    return moved
+  }
+
   function reset(): void {
     items.value = []
     decryptedItems.value.clear()
@@ -171,6 +202,9 @@ export const useVaultItemsStore = defineStore('vaultItems', () => {
     updateItem,
     deleteItem,
     toggleFavorite,
+    fetchAllIds,
+    bulkDeleteItems,
+    bulkMoveItems,
     setFilter,
     reset,
   }

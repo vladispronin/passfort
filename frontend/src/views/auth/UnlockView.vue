@@ -18,7 +18,7 @@ async function handleUnlock() {
   try {
     await unlock(masterPassword.value)
   } catch {
-    uiStore.showToast('Invalid master password', 'error')
+    uiStore.showToast('Неверный мастер-пароль', 'error')
   } finally {
     isLoading.value = false
     masterPassword.value = ''
@@ -40,14 +40,14 @@ async function handleUnlock() {
       <div class="flex flex-col items-center mb-6 text-white">
         <img src="/passfort-icon.svg" alt="PassFort" class="w-14 h-14 mb-3" />
         <h1 class="text-2xl font-bold tracking-wide">PassFort</h1>
-        <p class="text-blue-200 text-sm mt-1">Your secure fortress</p>
+        <p class="text-blue-200 text-sm mt-1">Ваша надёжная крепость</p>
       </div>
 
       <div class="bg-white rounded-2xl shadow-2xl px-8 py-8">
         <div class="text-center mb-6">
           <div class="text-4xl mb-3">&#128274;</div>
-          <h2 class="text-xl font-semibold text-slate-800">Vault Locked</h2>
-          <p class="mt-1 text-slate-500 text-sm">Enter your master password to unlock</p>
+          <h2 class="text-xl font-semibold text-slate-800">Хранилище заблокировано</h2>
+          <p class="mt-1 text-slate-500 text-sm">Введите мастер-пароль для разблокировки</p>
           <p v-if="authStore.user" class="text-xs text-slate-400 mt-1">{{ authStore.user.email }}</p>
         </div>
 
@@ -57,7 +57,7 @@ async function handleUnlock() {
             type="password"
             required
             autocomplete="current-password"
-            placeholder="Master password"
+            placeholder="Мастер-пароль"
             class="block w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
           />
 
@@ -66,7 +66,7 @@ async function handleUnlock() {
             :disabled="isLoading"
             class="w-full py-2.5 px-4 rounded-lg text-sm font-semibold text-white bg-brand-500 hover:bg-brand-600 disabled:opacity-50 transition-colors"
           >
-            {{ isLoading ? 'Unlocking...' : 'Unlock Vault' }}
+            {{ isLoading ? 'Разблокировка...' : 'Разблокировать' }}
           </button>
 
           <button
@@ -74,7 +74,7 @@ async function handleUnlock() {
             @click="logout"
             class="w-full py-2 px-4 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 text-sm transition-colors"
           >
-            Sign Out
+            Выйти
           </button>
         </form>
       </div>
