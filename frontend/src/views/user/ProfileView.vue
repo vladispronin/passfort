@@ -20,11 +20,11 @@ const showSessions = ref(false)
 <template>
   <div class="min-h-screen bg-[#eef2f8]">
     <header class="bg-white border-b border-slate-200">
-      <div class="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
+      <div class="max-w-2xl mx-auto px-4 h-14 flex items-center gap-3">
         <button @click="router.back()" class="text-slate-500 hover:text-slate-800 transition-colors text-sm">
           ← Назад
         </button>
-        <h2 class="text-lg font-semibold text-slate-800">Настройки</h2>
+        <h2 class="text-lg font-semibold text-slate-800">Профиль</h2>
       </div>
     </header>
 
