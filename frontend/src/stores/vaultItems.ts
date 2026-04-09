@@ -173,7 +173,7 @@ export const useVaultItemsStore = defineStore('vaultItems', () => {
   ): Promise<number> {
     const moved = await vaultItemsApi.bulkMove(vaultId, ids, categoryId)
     items.value = items.value.map((item) =>
-      ids.includes(item.id) ? { ...item, categoryId: categoryId ?? undefined } : item,
+      ids.includes(item.id) ? { ...item, categoryId } : item,
     )
     return moved
   }
