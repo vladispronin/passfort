@@ -11,6 +11,7 @@ use App\Entity\SecurityLog;
 use App\Entity\User;
 use App\Repository\SecurityLogRepository;
 use App\Service\Auth\RefreshTokenService;
+use App\Enum\SecurityLogAction;
 use App\Service\Security\SecurityLogService;
 use App\Service\Security\SecurityNotificationService;
 use App\Service\User\EmailChangeService;
@@ -191,7 +192,7 @@ class UserController extends AbstractController
             return $this->errorResponse($e->getMessage(), $statusCode);
         }
 
-        $this->securityLogService->log('user.email_change_requested', $user, $request, [
+        $this->securityLogService->log(SecurityLogAction::USER_EMAIL_CHANGE_REQUESTED, $user, $request, [
             'new_email' => $dto->newEmail,
         ]);
 
@@ -237,7 +238,7 @@ class UserController extends AbstractController
 
         $data = array_map(static fn(SecurityLog $log): array => [
             'id'        => $log->getId(),
-            'action'    => $log->getAction(),
+            'action'    => $log->getAction()->label(),
             'ipAddress' => $log->getIpAddress(),
             'userAgent' => $log->getUserAgent(),
             'metadata'  => $log->getMetadata(),
@@ -266,7 +267,7 @@ class UserController extends AbstractController
             return $this->errorResponse('Session not found', 404);
         }
 
-        $this->securityLogService->log('session.revoked', $user, $request, ['session_id' => $id]);
+        $this->securityLogService->log(SecurityLogAction::SESSION_REVOKED, $user, $request, ['session_id' => $id]);
 
         return $this->noContentResponse();
     }

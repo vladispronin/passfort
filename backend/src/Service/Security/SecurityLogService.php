@@ -6,6 +6,7 @@ namespace App\Service\Security;
 
 use App\Entity\SecurityLog;
 use App\Entity\User;
+use App\Enum\SecurityLogAction;
 use App\Message\SecurityLogMessage;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -19,7 +20,7 @@ class SecurityLogService
     ) {}
 
     public function log(
-        string $action,
+        SecurityLogAction $action,
         ?User $user = null,
         ?Request $request = null,
         array $metadata = [],
@@ -42,7 +43,7 @@ class SecurityLogService
     }
 
     private function logSync(
-        string $action,
+        SecurityLogAction $action,
         ?User $user,
         ?Request $request,
         array $metadata,

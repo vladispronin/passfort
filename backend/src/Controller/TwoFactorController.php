@@ -8,6 +8,7 @@ use App\DTO\TwoFactor\TwoFactorDisableDTO;
 use App\DTO\TwoFactor\TwoFactorEnableDTO;
 use App\Entity\User;
 use App\Service\Auth\TotpService;
+use App\Enum\SecurityLogAction;
 use App\Service\Security\SecurityLogService;
 use App\Trait\ApiResponseTrait;
 use Doctrine\ORM\EntityManagerInterface;
@@ -41,7 +42,7 @@ class TwoFactorController extends AbstractController
         $setupData = $this->totpService->generateSetupData($user);
         $this->em->flush();
 
-        $this->securityLogService->log('2fa.setup.initiated', $user, $request);
+        $this->securityLogService->log(SecurityLogAction::TWO_FA_SETUP_INITIATED, $user, $request);
 
         return $this->successResponse($setupData);
     }
@@ -60,7 +61,7 @@ class TwoFactorController extends AbstractController
         }
 
         $this->em->flush();
-        $this->securityLogService->log('2fa.enabled', $user, $request);
+        $this->securityLogService->log(SecurityLogAction::TWO_FA_ENABLED, $user, $request);
 
         return $this->successResponse(['backup_codes' => $backupCodes]);
     }
@@ -87,7 +88,7 @@ class TwoFactorController extends AbstractController
 
         $this->totpService->disable($user);
         $this->em->flush();
-        $this->securityLogService->log('2fa.disabled', $user, $request);
+        $this->securityLogService->log(SecurityLogAction::TWO_FA_DISABLED, $user, $request);
 
         return $this->noContentResponse();
     }
@@ -118,7 +119,7 @@ class TwoFactorController extends AbstractController
 
         $rawCodes = $this->totpService->regenerateBackupCodes($user);
         $this->em->flush();
-        $this->securityLogService->log('2fa.backup_codes_regenerated', $user, $request);
+        $this->securityLogService->log(SecurityLogAction::TWO_FA_BACKUP_CODES_REGENERATED, $user, $request);
 
         return $this->successResponse(['backup_codes' => $rawCodes]);
     }

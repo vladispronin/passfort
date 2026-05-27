@@ -13,6 +13,7 @@ use App\Service\Auth\AuthService;
 use App\Service\Auth\EmailVerificationService;
 use App\Service\Auth\RefreshTokenService;
 use App\Service\Auth\TokenService;
+use App\Enum\SecurityLogAction;
 use App\Service\Security\SecurityLogService;
 use App\Trait\ApiResponseTrait;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -62,7 +63,7 @@ class AuthController extends AbstractController
 
         try {
             $user = $this->authService->register($dto);
-            $this->securityLogService->log('user.register', $user, $request);
+            $this->securityLogService->log(SecurityLogAction::USER_REGISTER, $user, $request);
 
             return $this->createdResponse([
                 'id' => $user->getId()?->toRfc4122(),
@@ -90,20 +91,20 @@ class AuthController extends AbstractController
             $result = $this->authService->login($dto, $request);
 
             if (isset($result['requires_2fa'])) {
-                $this->securityLogService->log('user.login.2fa_required', null, $request, ['email' => $dto->email]);
+                $this->securityLogService->log(SecurityLogAction::USER_LOGIN_2FA_REQUIRED, null, $request, ['email' => $dto->email]);
                 return $this->successResponse([
                     'requires_2fa' => true,
                     'temp_token' => $result['temp_token'],
                 ]);
             }
 
-            $this->securityLogService->log('user.login', null, $request, ['email' => $dto->email]);
+            $this->securityLogService->log(SecurityLogAction::USER_LOGIN, null, $request, ['email' => $dto->email]);
             return $this->successResponse($result);
         } catch (EmailNotVerifiedException) {
-            $this->securityLogService->log('user.login.email_not_verified', null, $request, ['email' => $dto->email]);
+            $this->securityLogService->log(SecurityLogAction::USER_LOGIN_EMAIL_NOT_VERIFIED, null, $request, ['email' => $dto->email]);
             return $this->errorResponse('Please verify your email address before logging in', 403, 'EMAIL_NOT_VERIFIED');
         } catch (AuthenticationException) {
-            $this->securityLogService->log('user.login.failed', null, $request, ['email' => $dto->email]);
+            $this->securityLogService->log(SecurityLogAction::USER_LOGIN_FAILED, null, $request, ['email' => $dto->email]);
             return $this->errorResponse('Invalid credentials', 401);
         }
     }
@@ -123,10 +124,10 @@ class AuthController extends AbstractController
 
         try {
             $tokens = $this->authService->loginWithTotp($dto->tempToken, $dto->code, $request);
-            $this->securityLogService->log('user.login.2fa_success', null, $request);
+            $this->securityLogService->log(SecurityLogAction::USER_LOGIN_2FA_SUCCESS, null, $request);
             return $this->successResponse($tokens);
         } catch (AuthenticationException) {
-            $this->securityLogService->log('user.login.2fa_failed', null, $request);
+            $this->securityLogService->log(SecurityLogAction::USER_LOGIN_2FA_FAILED, null, $request);
             return $this->errorResponse('Invalid 2FA code or expired session', 401);
         }
     }
@@ -142,7 +143,7 @@ class AuthController extends AbstractController
 
         try {
             $user = $this->emailVerificationService->verifyToken($rawToken);
-            $this->securityLogService->log('user.email_verified', $user, $request);
+            $this->securityLogService->log(SecurityLogAction::USER_EMAIL_VERIFIED, $user, $request);
             return $this->successResponse(['message' => 'Email verified successfully']);
         } catch (EmailVerificationException $e) {
             return $this->errorResponse($e->getMessage(), 400, 'EMAIL_VERIFICATION_FAILED');
@@ -169,7 +170,7 @@ class AuthController extends AbstractController
         }
 
         $this->emailVerificationService->resendVerification($email);
-        $this->securityLogService->log('user.resend_verification', null, $request, ['email' => $email]);
+        $this->securityLogService->log(SecurityLogAction::USER_RESEND_VERIFICATION, null, $request, ['email' => $email]);
 
         return $this->successResponse([
             'message' => 'If this email is registered and unverified, a verification email has been sent',
@@ -182,7 +183,7 @@ class AuthController extends AbstractController
         $user = $this->getUser();
         if ($user !== null) {
             $this->refreshTokenService->revokeAllUserTokens($user);
-            $this->securityLogService->log('user.logout', $user, $request);
+            $this->securityLogService->log(SecurityLogAction::USER_LOGOUT, $user, $request);
         }
         return $this->noContentResponse();
     }
