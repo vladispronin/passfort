@@ -42,10 +42,10 @@ final class Version20260527000001 extends AbstractMigration
             END
         ");
 
-        $this->addSql('DROP INDEX idx_security_logs_action ON security_logs');
+        $this->addSql('DROP INDEX IDX_security_log_action ON security_logs');
         $this->addSql('ALTER TABLE security_logs DROP COLUMN action');
         $this->addSql('ALTER TABLE security_logs CHANGE action_code action TINYINT UNSIGNED NOT NULL');
-        $this->addSql('CREATE INDEX idx_security_logs_action ON security_logs (action)');
+        $this->addSql('CREATE INDEX IDX_security_log_action ON security_logs (action)');
     }
 
     public function down(Schema $schema): void
@@ -76,9 +76,9 @@ final class Version20260527000001 extends AbstractMigration
             END
         ");
 
-        $this->addSql('DROP INDEX idx_security_logs_action ON security_logs');
+        $this->addSql('DROP INDEX IDX_security_log_action ON security_logs');
         $this->addSql('ALTER TABLE security_logs DROP COLUMN action');
         $this->addSql('ALTER TABLE security_logs CHANGE action_old action VARCHAR(100) NOT NULL');
-        $this->addSql('CREATE INDEX idx_security_logs_action ON security_logs (action)');
+        $this->addSql('CREATE INDEX IDX_security_log_action ON security_logs (action)');
     }
 }
