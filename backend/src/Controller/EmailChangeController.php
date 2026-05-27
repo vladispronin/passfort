@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Exception\EmailChangeException;
+use App\Enum\SecurityLogAction;
 use App\Service\Security\SecurityLogService;
 use App\Service\Security\SecurityNotificationService;
 use App\Service\User\EmailChangeService;
@@ -42,7 +43,7 @@ class EmailChangeController extends AbstractController
             return $this->errorResponse($e->getMessage(), 400);
         }
 
-        $this->securityLogService->log('user.email_changed', $user, $request, [
+        $this->securityLogService->log(SecurityLogAction::USER_EMAIL_CHANGED, $user, $request, [
             'old_email' => $oldEmail,
             'new_email' => $user->getEmail(),
         ]);

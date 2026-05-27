@@ -11,6 +11,7 @@ use App\Entity\VaultItem;
 use App\Repository\VaultItemRepository;
 use App\Service\Auth\RefreshTokenService;
 use App\Service\Auth\TokenService;
+use App\Enum\SecurityLogAction;
 use App\Service\Security\SecurityLogService;
 use App\Service\Security\SecurityNotificationService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -94,7 +95,7 @@ class MasterPasswordService
 
         // Логирование события безопасности
         $this->securityLogService->log(
-            'user.master_password_changed',
+            SecurityLogAction::USER_MASTER_PASSWORD_CHANGED,
             $user,
             $request,
             ['items_count' => count($dto->items)],

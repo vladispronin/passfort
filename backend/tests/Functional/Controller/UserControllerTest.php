@@ -6,6 +6,7 @@ namespace App\Tests\Functional\Controller;
 
 use App\Entity\RefreshToken;
 use App\Entity\SecurityLog;
+use App\Enum\SecurityLogAction;
 use App\Service\Auth\RefreshTokenService;
 use App\Tests\Functional\ApiTestCase;
 use Symfony\Component\HttpFoundation\Request;
@@ -495,7 +496,7 @@ class UserControllerTest extends ApiTestCase
     // GET /api/v1/user/security-log
     // -------------------------------------------------------------------------
 
-    private function createSecurityLog(\App\Entity\User $user, string $action, string $ip = '127.0.0.1'): SecurityLog
+    private function createSecurityLog(\App\Entity\User $user, SecurityLogAction $action, string $ip = '127.0.0.1'): SecurityLog
     {
         $log = new SecurityLog();
         $log->setUser($user);
@@ -532,8 +533,8 @@ class UserControllerTest extends ApiTestCase
         $user  = $this->createTestUser('seclog_list@example.com', $this->masterPasswordHash);
         $token = $this->getJwtToken($user);
 
-        $this->createSecurityLog($user, 'user.login');
-        $this->createSecurityLog($user, 'user.logout');
+        $this->createSecurityLog($user, SecurityLogAction::USER_LOGIN);
+        $this->createSecurityLog($user, SecurityLogAction::USER_LOGOUT);
 
         $response = $this->jsonRequest('GET', '/api/v1/user/security-log', [], $token);
 
@@ -555,7 +556,7 @@ class UserControllerTest extends ApiTestCase
         $token = $this->getJwtToken($user);
 
         for ($i = 0; $i < 5; $i++) {
-            $this->createSecurityLog($user, 'user.login');
+            $this->createSecurityLog($user, SecurityLogAction::USER_LOGIN);
         }
 
         $response = $this->jsonRequest('GET', '/api/v1/user/security-log?page=1&limit=2', [], $token);
@@ -576,8 +577,8 @@ class UserControllerTest extends ApiTestCase
         $user2  = $this->createTestUser('seclog_own2@example.com', $this->masterPasswordHash);
         $token1 = $this->getJwtToken($user1);
 
-        $this->createSecurityLog($user1, 'user.login');
-        $this->createSecurityLog($user2, 'user.login');
+        $this->createSecurityLog($user1, SecurityLogAction::USER_LOGIN);
+        $this->createSecurityLog($user2, SecurityLogAction::USER_LOGIN);
 
         $response = $this->jsonRequest('GET', '/api/v1/user/security-log', [], $token1);
 
@@ -592,7 +593,7 @@ class UserControllerTest extends ApiTestCase
         $token = $this->getJwtToken($user);
 
         for ($i = 0; $i < 3; $i++) {
-            $this->createSecurityLog($user, 'user.login');
+            $this->createSecurityLog($user, SecurityLogAction::USER_LOGIN);
         }
 
         $response = $this->jsonRequest('GET', '/api/v1/user/security-log?page=2&limit=2', [], $token);
