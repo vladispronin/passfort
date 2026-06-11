@@ -21,13 +21,17 @@ services:
   redis:
     restart: always
 
-  kafka:
+  rabbitmq:
     restart: always
-    ports:
-      - "17092:9092"
 
-  zookeeper:
-    restart: always
+  # Kafka (отключена)
+  #kafka:
+  #  restart: always
+  #  ports:
+  #    - "17092:9092"
+
+  #zookeeper:
+  #  restart: always
 
   messenger-worker:
     restart: always

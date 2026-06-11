@@ -32,6 +32,11 @@ RUN pecl install redis && docker-php-ext-enable redis
 # Install rdkafka extension
 RUN pecl install rdkafka && docker-php-ext-enable rdkafka
 
+# Install RabbitMQ C library and PHP AMQP extension
+RUN apk add --no-cache rabbitmq-c-dev \
+    && pecl install amqp \
+    && docker-php-ext-enable amqp
+
 # Install opcache
 RUN docker-php-ext-install opcache
 

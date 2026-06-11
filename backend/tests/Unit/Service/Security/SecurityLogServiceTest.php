@@ -58,12 +58,10 @@ class SecurityLogServiceTest extends TestCase
         $user->setEmail('test@example.com');
         $request = Request::create('/');
 
-        // Kafka недоступна — bus бросает исключение
         $this->bus->expects($this->once())
             ->method('dispatch')
-            ->willThrowException(new \RuntimeException('Kafka unavailable'));
+            ->willThrowException(new \RuntimeException('Bus unavailable'));
 
-        // Должен произойти fallback — синхронная запись через EM
         $this->em->expects($this->once())->method('persist');
         $this->em->expects($this->once())->method('flush');
 

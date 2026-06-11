@@ -36,7 +36,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      kafka:
+      rabbitmq:
         condition: service_healthy
       mailpit:
         condition: service_started
@@ -107,69 +107,86 @@ services:
     networks:
       - passfort_network
 
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.5.0
-    restart: unless-stopped
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
     environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
     volumes:
-      - zookeeper_data:/var/lib/zookeeper/data
-      - zookeeper_logs:/var/lib/zookeeper/log
+      - rabbitmq_data:/var/lib/rabbitmq
+    ports:
+      - "15672:15672"
+      - "5672:5672"
     healthcheck:
-      test: ["CMD", "bash", "-c", "nc -z localhost 2181"]
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
       - passfort_network
 
-  kafka:
-    image: confluentinc/cp-kafka:7.5.0
-    restart: unless-stopped
-    depends_on:
-      zookeeper:
-        condition: service_healthy
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:17092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'false'
-      # Короткий таймаут сессии ZooKeeper — при краше Kafka эфемерные узлы
-      # брокера очищаются быстрее, что позволяет перезапуститься без ошибки NodeExists
-      KAFKA_ZOOKEEPER_SESSION_TIMEOUT_MS: 6000
-      KAFKA_ZOOKEEPER_CONNECTION_TIMEOUT_MS: 6000
-    volumes:
-      - kafka_data:/var/lib/kafka/data
-    ports:
-      - "19092:9092"
-    healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 29092 || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 60s
-    networks:
-      - passfort_network
+  # Kafka (отключена)
+  #zookeeper:
+  #  image: confluentinc/cp-zookeeper:7.5.0
+  #  restart: unless-stopped
+  #  environment:
+  #    ZOOKEEPER_CLIENT_PORT: 2181
+  #    ZOOKEEPER_TICK_TIME: 2000
+  #  volumes:
+  #    - zookeeper_data:/var/lib/zookeeper/data
+  #    - zookeeper_logs:/var/lib/zookeeper/log
+  #  healthcheck:
+  #    test: ["CMD", "bash", "-c", "nc -z localhost 2181"]
+  #    interval: 10s
+  #    timeout: 5s
+  #    retries: 5
+  #  networks:
+  #    - passfort_network
 
-  kafka-init:
-    image: confluentinc/cp-kafka:7.5.0
-    depends_on:
-      kafka:
-        condition: service_healthy
-    volumes:
-      - ./docker/kafka/create-topics.sh:/create-topics.sh:ro
-    command: sh -c "/create-topics.sh"
-    networks:
-      - passfort_network
+  #kafka:
+  #  image: confluentinc/cp-kafka:7.5.0
+  #  restart: unless-stopped
+  #  depends_on:
+  #    zookeeper:
+  #      condition: service_healthy
+  #  environment:
+  #    KAFKA_BROKER_ID: 1
+  #    KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+  #    KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:17092
+  #    KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+  #    KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+  #    KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+  #    KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'false'
+  #    KAFKA_ZOOKEEPER_SESSION_TIMEOUT_MS: 6000
+  #    KAFKA_ZOOKEEPER_CONNECTION_TIMEOUT_MS: 6000
+  #  volumes:
+  #    - kafka_data:/var/lib/kafka/data
+  #  ports:
+  #    - "19092:9092"
+  #  healthcheck:
+  #    test: ["CMD-SHELL", "nc -z localhost 29092 || exit 1"]
+  #    interval: 10s
+  #    timeout: 5s
+  #    retries: 10
+  #    start_period: 60s
+  #  networks:
+  #    - passfort_network
+
+  #kafka-init:
+  #  image: confluentinc/cp-kafka:7.5.0
+  #  depends_on:
+  #    kafka:
+  #      condition: service_healthy
+  #  volumes:
+  #    - ./docker/kafka/create-topics.sh:/create-topics.sh:ro
+  #  command: sh -c "/create-topics.sh"
+  #  networks:
+  #    - passfort_network
 
   messenger-worker:
     image: passfort-php:latest
     entrypoint: ["/docker-entrypoint-worker.sh"]
-    command: ["php", "bin/console", "messenger:consume", "kafka_security_logs", "kafka_notifications", "--memory-limit=128M", "--time-limit=3600", "-v"]
+    command: ["php", "bin/console", "messenger:consume", "security_logs", "notifications", "--memory-limit=128M", "--time-limit=600", "-v"]
     working_dir: /var/www/backend
     volumes:
       - ./backend:/var/www/backend
@@ -184,7 +201,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      kafka:
+      rabbitmq:
         condition: service_healthy
       php:
         condition: service_started
@@ -195,9 +212,11 @@ services:
 volumes:
   mysql_data:
   redis_data:
-  zookeeper_data:
-  zookeeper_logs:
-  kafka_data:
+  rabbitmq_data:
+  # Kafka (отключена)
+  #zookeeper_data:
+  #zookeeper_logs:
+  #kafka_data:
 
 networks:
   passfort_network:

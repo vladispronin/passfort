@@ -25,7 +25,6 @@ class SecurityLogService
         ?Request $request = null,
         array $metadata = [],
     ): void {
-        // Асинхронная запись через Kafka
         $message = new SecurityLogMessage(
             action: $action,
             userId: $user?->getId()?->toRfc4122(),
@@ -37,7 +36,6 @@ class SecurityLogService
         try {
             $this->bus->dispatch($message);
         } catch (\Throwable) {
-            // Fallback: синхронная запись если Kafka недоступна
             $this->logSync($action, $user, $request, $metadata);
         }
     }
@@ -59,7 +57,7 @@ class SecurityLogService
             $this->em->persist($log);
             $this->em->flush();
         } catch (\Throwable) {
-            // Fallback-запись не должна ломать основной запрос
+            // fallback не должен ломать основной запрос
         }
     }
 }
