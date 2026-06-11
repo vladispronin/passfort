@@ -44,7 +44,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: pdo_mysql, mbstring, openssl, sodium, redis, rdkafka
+          extensions: pdo_mysql, mbstring, openssl, sodium, redis, rdkafka, amqp
           coverage: none
 
       - name: Кэш Composer зависимостей
@@ -66,12 +66,11 @@ jobs:
           echo "DATABASE_URL=mysql://passfort_user:passfort_password@127.0.0.1:3306/passfort_test?serverVersion=8.0&charset=utf8mb4" >> backend/.env
           echo "REDIS_URL=redis://127.0.0.1:6379" >> backend/.env
           echo "REDIS_DSN=redis://127.0.0.1:6379" >> backend/.env
-          echo "MESSENGER_TRANSPORT_DSN=kafka://localhost:9092" >> backend/.env
+          echo "MESSENGER_TRANSPORT_DSN=in-memory://" >> backend/.env
           echo "JWT_SECRET_KEY=%kernel.project_dir%/config/jwt/private.pem" >> backend/.env
           echo "JWT_PUBLIC_KEY=%kernel.project_dir%/config/jwt/public.pem" >> backend/.env
           echo "JWT_PASSPHRASE=jkl" >> backend/.env
           echo "JWT_TTL=3600" >> backend/.env
-          echo "KAFKA_BROKERS=localhost:9092" >> backend/.env
           echo "RATE_LIMITER_ENABLED=false" >> backend/.env
           echo "LOCK_DSN=flock" >> backend/.env
           echo "DEFAULT_URI=http://localhost" >> backend/.env
@@ -101,7 +100,6 @@ jobs:
           JWT_SECRET_KEY: "%kernel.project_dir%/config/jwt/private.pem"
           JWT_PUBLIC_KEY: "%kernel.project_dir%/config/jwt/public.pem"
           JWT_PASSPHRASE: "jkl"
-          KAFKA_BROKERS: "localhost:9092"
           MAILER_DSN: "null://null"
           MAILER_FROM_EMAIL: "noreply@passfort.test"
           MAILER_FROM_NAME: "PassFort Test"
