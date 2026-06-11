@@ -26,7 +26,7 @@ class SecurityLogService
         array $metadata = [],
     ): void {
         $message = new SecurityLogMessage(
-            action: $action->value,
+            action: $action,
             userId: $user?->getId()?->toRfc4122(),
             ipAddress: $request?->getClientIp(),
             userAgent: $request?->headers->get('User-Agent'),

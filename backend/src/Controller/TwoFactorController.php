@@ -9,7 +9,6 @@ use App\DTO\TwoFactor\TwoFactorEnableDTO;
 use App\Entity\User;
 use App\Enum\SecurityLogAction;
 use App\Service\Auth\TotpService;
-use App\Enum\SecurityLogAction;
 use App\Service\Security\SecurityLogService;
 use App\Trait\ApiResponseTrait;
 use Doctrine\ORM\EntityManagerInterface;

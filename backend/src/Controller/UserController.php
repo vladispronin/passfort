@@ -12,7 +12,6 @@ use App\Entity\User;
 use App\Enum\SecurityLogAction;
 use App\Repository\SecurityLogRepository;
 use App\Service\Auth\RefreshTokenService;
-use App\Enum\SecurityLogAction;
 use App\Service\Security\SecurityLogService;
 use App\Service\Security\SecurityNotificationService;
 use App\Service\User\EmailChangeService;

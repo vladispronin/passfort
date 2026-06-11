@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Message\Handler;
 
 use App\Entity\SecurityLog;
-use App\Enum\SecurityLogAction;
 use App\Message\SecurityLogMessage;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -22,7 +21,7 @@ class SecurityLogHandler
     public function __invoke(SecurityLogMessage $message): void
     {
         $log = new SecurityLog();
-        $log->setAction(SecurityLogAction::from($message->action));
+        $log->setAction($message->action);
         $log->setIpAddress($message->ipAddress);
         $log->setUserAgent($message->userAgent);
         $log->setMetadata($message->metadata ?: null);

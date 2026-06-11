@@ -14,7 +14,6 @@ use App\Service\Auth\AuthService;
 use App\Service\Auth\EmailVerificationService;
 use App\Service\Auth\RefreshTokenService;
 use App\Service\Auth\TokenService;
-use App\Enum\SecurityLogAction;
 use App\Service\Security\SecurityLogService;
 use App\Trait\ApiResponseTrait;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
