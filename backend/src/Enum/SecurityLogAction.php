@@ -27,7 +27,7 @@ enum SecurityLogAction: int
 
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::USER_REGISTER                   => 'user.register',
             self::USER_LOGIN                      => 'user.login',
             self::USER_LOGIN_FAILED               => 'user.login.failed',

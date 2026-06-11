@@ -12,6 +12,7 @@ use App\Enum\SecurityLogAction;
 use App\Repository\VaultItemRepository;
 use App\Service\Auth\RefreshTokenService;
 use App\Service\Auth\TokenService;
+use App\Enum\SecurityLogAction;
 use App\Service\Security\SecurityLogService;
 use App\Service\Security\SecurityNotificationService;
 use App\Service\User\MasterPasswordService;

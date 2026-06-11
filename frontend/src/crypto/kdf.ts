@@ -53,7 +53,7 @@ export async function deriveEncryptionKey(
     },
     keyMaterial,
     { name: 'AES-GCM', length: opts.keyLengthBits },
-    false, // не экспортируемый
+    true,
     ['encrypt', 'decrypt'],
   )
 

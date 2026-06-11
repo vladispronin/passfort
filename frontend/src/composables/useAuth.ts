@@ -46,7 +46,7 @@ export function useAuth() {
     authStore.setUser(profile)
 
     const encKey = await deriveEncryptionKey(masterPassword, salt)
-    authStore.setEncryptionKey(encKey, salt)
+    await authStore.setEncryptionKey(encKey, salt)
 
     await router.push('/vault')
   }
@@ -119,7 +119,7 @@ export function useAuth() {
     }
 
     const encKey = await deriveEncryptionKey(masterPassword, authStore.user!.salt)
-    authStore.setEncryptionKey(encKey, authStore.user!.salt)
+    await authStore.setEncryptionKey(encKey, authStore.user!.salt)
 
     await router.push('/vault')
   }

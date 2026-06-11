@@ -39,7 +39,7 @@ describe('KDF Module', () => {
         }),
         mockKey,
         { name: 'AES-GCM', length: 256 },
-        false,
+        true,
         ['encrypt', 'decrypt'],
       )
     })

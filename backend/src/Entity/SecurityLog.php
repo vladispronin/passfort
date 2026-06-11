@@ -11,6 +11,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: SecurityLogRepository::class)]
 #[ORM\Table(name: 'security_logs')]
+#[ORM\Index(name: 'idx_security_logs_action', columns: ['action'])]
 #[ORM\HasLifecycleCallbacks]
 class SecurityLog
 {

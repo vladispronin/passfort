@@ -5,6 +5,8 @@ import { useVaultStore } from '../../stores/vault'
 import { useVaultItemsStore } from '../../stores/vaultItems'
 import { useCategoriesStore } from '../../stores/categories'
 import { useUiStore } from '../../stores/ui'
+import { useSettingsStore } from '../../stores/settings'
+import { useAuthStore } from '../../stores/auth'
 import { useVaultExport } from '../../composables/useVaultExport'
 
 const router = useRouter()
@@ -12,7 +14,17 @@ const vaultStore = useVaultStore()
 const itemsStore = useVaultItemsStore()
 const categoriesStore = useCategoriesStore()
 const uiStore = useUiStore()
+const settingsStore = useSettingsStore()
+const authStore = useAuthStore()
 const { isExporting, isImporting, exportVault, importVault } = useVaultExport()
+
+async function toggleSessionUnlock() {
+  const newValue = !settingsStore.sessionUnlock
+  settingsStore.setSessionUnlock(newValue)
+  if (newValue) {
+    await authStore.saveKeyToSession()
+  }
+}
 
 const importFileInput = ref<HTMLInputElement | null>(null)
 const selectedFile = ref<File | null>(null)
@@ -157,6 +169,37 @@ async function confirmImport() {
             </div>
           </div>
 
+        </div>
+      </div>
+
+      <!-- Секция: Безопасность -->
+      <div>
+        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider px-1 mb-2">Безопасность</p>
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+          <div class="px-6 py-4 flex items-start justify-between gap-4">
+            <div class="flex-1">
+              <p class="text-sm font-medium text-slate-800">Оставаться разблокированным при обновлении страницы</p>
+              <p class="text-xs text-slate-500 mt-1">
+                Хранилище не будет запрашивать мастер-пароль при обновлении страницы. Закрытие вкладки или браузера всё равно заблокирует хранилище.
+              </p>
+              <p class="text-xs text-amber-600 mt-1.5 flex items-center gap-1">
+                <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                Снижает защиту: ключ шифрования сохраняется в памяти сессии браузера.
+              </p>
+            </div>
+            <button
+              role="switch"
+              :aria-checked="settingsStore.sessionUnlock"
+              @click="toggleSessionUnlock"
+              class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
+              :class="settingsStore.sessionUnlock ? 'bg-brand-500' : 'bg-slate-200'"
+            >
+              <span
+                class="pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform transition duration-200"
+                :class="settingsStore.sessionUnlock ? 'translate-x-5' : 'translate-x-0'"
+              />
+            </button>
+          </div>
         </div>
       </div>
 

@@ -69,9 +69,9 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach((to, _from) => {
+router.beforeEach(async (to, _from) => {
   const authStore = useAuthStore()
-  authStore.initFromStorage()
+  await authStore.initFromStorage()
 
   // Страница 2FA доступна только при наличии pending сессии
   if (to.name === 'two-factor' && !authStore.requiresTwoFactor) {

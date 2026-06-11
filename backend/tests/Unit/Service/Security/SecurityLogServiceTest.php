@@ -37,7 +37,7 @@ class SecurityLogServiceTest extends TestCase
         $this->bus->expects($this->once())
             ->method('dispatch')
             ->with($this->isInstanceOf(SecurityLogMessage::class))
-            ->willReturn(new Envelope(new SecurityLogMessage(action: SecurityLogAction::USER_LOGIN->value)));
+            ->willReturn(new Envelope(new SecurityLogMessage(action: SecurityLogAction::USER_LOGIN)));
 
         $this->service->log(SecurityLogAction::USER_LOGIN, $user, $request);
     }
@@ -46,8 +46,9 @@ class SecurityLogServiceTest extends TestCase
     {
         $this->bus->expects($this->once())
             ->method('dispatch')
-            ->willReturn(new Envelope(new SecurityLogMessage(action: SecurityLogAction::USER_LOGIN->value)));
+            ->willReturn(new Envelope(new SecurityLogMessage(action: SecurityLogAction::USER_LOGIN)));
 
+        // Не должно бросать исключений
         $this->service->log(SecurityLogAction::USER_LOGIN);
     }
 
@@ -74,10 +75,9 @@ class SecurityLogServiceTest extends TestCase
         $this->bus->expects($this->once())
             ->method('dispatch')
             ->with($this->callback(function (SecurityLogMessage $msg) use ($metadata) {
-                return $msg->metadata === $metadata
-                    && $msg->action === SecurityLogAction::USER_LOGIN_FAILED->value;
+                return $msg->metadata === $metadata && $msg->action === SecurityLogAction::USER_LOGIN_FAILED;
             }))
-            ->willReturn(new Envelope(new SecurityLogMessage(action: SecurityLogAction::USER_LOGIN_FAILED->value)));
+            ->willReturn(new Envelope(new SecurityLogMessage(action: SecurityLogAction::USER_LOGIN_FAILED)));
 
         $this->service->log(SecurityLogAction::USER_LOGIN_FAILED, null, null, $metadata);
     }

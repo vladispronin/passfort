@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { UserProfile } from '../types/auth'
+import { useSettingsStore } from './settings'
 
 interface PendingTwoFactor {
   tempToken: string
@@ -32,9 +33,16 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.setItem('refresh_token', refresh)
   }
 
-  function setEncryptionKey(key: CryptoKey, salt: string): void {
+  async function setEncryptionKey(key: CryptoKey, salt: string): Promise<void> {
     encryptionKey.value = key
     userSalt.value = salt
+
+    const settingsStore = useSettingsStore()
+    if (settingsStore.sessionUnlock) {
+      const rawKey = await crypto.subtle.exportKey('raw', key)
+      const b64 = btoa(String.fromCharCode(...new Uint8Array(rawKey)))
+      sessionStorage.setItem('session_encryption_key', b64)
+    }
   }
 
   function setUser(profile: UserProfile): void {
@@ -66,18 +74,45 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('access_token')
     localStorage.removeItem('refresh_token')
     localStorage.removeItem('master_password_hash')
+    sessionStorage.removeItem('session_encryption_key')
+  }
+
+  async function saveKeyToSession(): Promise<void> {
+    if (!encryptionKey.value) return
+    const rawKey = await crypto.subtle.exportKey('raw', encryptionKey.value)
+    const b64 = btoa(String.fromCharCode(...new Uint8Array(rawKey)))
+    sessionStorage.setItem('session_encryption_key', b64)
   }
 
   function lockVault(): void {
-    // Очищаем ключ шифрования из памяти
     encryptionKey.value = null
+    sessionStorage.removeItem('session_encryption_key')
   }
 
-  // Восстанавливаем токен из localStorage при инициализации
-  function initFromStorage(): void {
+  async function initFromStorage(): Promise<void> {
     const storedToken = localStorage.getItem('access_token')
     if (storedToken) {
       accessToken.value = storedToken
+    }
+
+    const settingsStore = useSettingsStore()
+    if (settingsStore.sessionUnlock && encryptionKey.value === null) {
+      const b64 = sessionStorage.getItem('session_encryption_key')
+      if (b64) {
+        try {
+          const raw = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))
+          const key = await crypto.subtle.importKey(
+            'raw',
+            raw,
+            { name: 'AES-GCM', length: 256 },
+            true,
+            ['encrypt', 'decrypt'],
+          )
+          encryptionKey.value = key
+        } catch {
+          sessionStorage.removeItem('session_encryption_key')
+        }
+      }
     }
   }
 
@@ -98,6 +133,7 @@ export const useAuthStore = defineStore('auth', () => {
     setPendingTwoFactor,
     clearPendingTwoFactor,
     clearAuth,
+    saveKeyToSession,
     lockVault,
     initFromStorage,
   }
