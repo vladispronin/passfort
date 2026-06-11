@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Enum\SecurityLogAction;
 use App\Repository\SecurityLogRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
@@ -22,8 +23,8 @@ class SecurityLog
     #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
     private ?User $user = null;
 
-    #[ORM\Column(length: 100)]
-    private string $action;
+    #[ORM\Column(type: Types::SMALLINT, enumType: SecurityLogAction::class, options: ['unsigned' => true])]
+    private SecurityLogAction $action;
 
     #[ORM\Column(length: 45, nullable: true)]
     private ?string $ipAddress = null;
@@ -59,12 +60,12 @@ class SecurityLog
         return $this;
     }
 
-    public function getAction(): string
+    public function getAction(): SecurityLogAction
     {
         return $this->action;
     }
 
-    public function setAction(string $action): self
+    public function setAction(SecurityLogAction $action): self
     {
         $this->action = $action;
         return $this;

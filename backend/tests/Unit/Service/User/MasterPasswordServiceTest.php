@@ -8,6 +8,7 @@ use App\DTO\User\ChangeMasterPasswordDTO;
 use App\DTO\User\ReEncryptedItemDTO;
 use App\Entity\User;
 use App\Entity\VaultItem;
+use App\Enum\SecurityLogAction;
 use App\Repository\VaultItemRepository;
 use App\Service\Auth\RefreshTokenService;
 use App\Service\Auth\TokenService;
@@ -258,7 +259,7 @@ class MasterPasswordServiceTest extends TestCase
 
         $this->securityLogService->expects($this->once())
             ->method('log')
-            ->with('user.master_password_changed', $user);
+            ->with(SecurityLogAction::USER_MASTER_PASSWORD_CHANGED, $user);
 
         $this->service->changeMasterPassword($user, $this->makeDto([]), new Request());
     }

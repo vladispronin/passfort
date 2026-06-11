@@ -6,6 +6,7 @@ namespace App\Service\Security;
 
 use App\Entity\SecurityLog;
 use App\Entity\User;
+use App\Enum\SecurityLogAction;
 use App\Message\SecurityLogMessage;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -19,14 +20,13 @@ class SecurityLogService
     ) {}
 
     public function log(
-        string $action,
+        SecurityLogAction $action,
         ?User $user = null,
         ?Request $request = null,
         array $metadata = [],
     ): void {
-        // Асинхронная запись через Kafka
         $message = new SecurityLogMessage(
-            action: $action,
+            action: $action->value,
             userId: $user?->getId()?->toRfc4122(),
             ipAddress: $request?->getClientIp(),
             userAgent: $request?->headers->get('User-Agent'),
@@ -36,13 +36,12 @@ class SecurityLogService
         try {
             $this->bus->dispatch($message);
         } catch (\Throwable) {
-            // Fallback: синхронная запись если Kafka недоступна
             $this->logSync($action, $user, $request, $metadata);
         }
     }
 
     private function logSync(
-        string $action,
+        SecurityLogAction $action,
         ?User $user,
         ?Request $request,
         array $metadata,
@@ -58,7 +57,7 @@ class SecurityLogService
             $this->em->persist($log);
             $this->em->flush();
         } catch (\Throwable) {
-            // Fallback-запись не должна ломать основной запрос
+            // fallback не должен ломать основной запрос
         }
     }
 }

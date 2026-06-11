@@ -35,14 +35,24 @@ function formatDate(dateStr: string): string {
 
 function actionLabel(action: string): string {
   const labels: Record<string, string> = {
-    'user.login': 'Вход в аккаунт',
-    'user.logout': 'Выход из аккаунта',
-    'user.register': 'Регистрация',
-    'user.email_verified': 'Email подтверждён',
-    'user.email_change_requested': 'Запрос смены email',
-    'user.email_changed': 'Email изменён',
-    'user.master_password_changed': 'Мастер-пароль изменён',
-    'session.revoked': 'Сессия отозвана',
+    'user.register':                   'Регистрация',
+    'user.login':                      'Вход в аккаунт',
+    'user.login.failed':               'Неудачная попытка входа',
+    'user.login.email_not_verified':   'Вход: email не подтверждён',
+    'user.login.2fa_required':         'Вход: требуется 2FA',
+    'user.login.2fa_success':          'Вход через 2FA',
+    'user.login.2fa_failed':           'Неверный код 2FA',
+    'user.email_verified':             'Email подтверждён',
+    'user.resend_verification':        'Повторная отправка подтверждения',
+    'user.email_change_requested':     'Запрос смены email',
+    'user.email_changed':              'Email изменён',
+    'user.master_password_changed':    'Мастер-пароль изменён',
+    'user.logout':                     'Выход из аккаунта',
+    'session.revoked':                 'Сессия отозвана',
+    '2fa.setup.initiated':             'Настройка 2FA начата',
+    '2fa.enabled':                     '2FA включена',
+    '2fa.disabled':                    '2FA отключена',
+    '2fa.backup_codes_regenerated':    'Резервные коды 2FA обновлены',
   }
   return labels[action] ?? action
 }

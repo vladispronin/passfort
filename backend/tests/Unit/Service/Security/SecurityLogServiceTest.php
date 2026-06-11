@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Service\Security;
 
 use App\Entity\User;
+use App\Enum\SecurityLogAction;
 use App\Message\SecurityLogMessage;
 use App\Service\Security\SecurityLogService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -36,19 +37,18 @@ class SecurityLogServiceTest extends TestCase
         $this->bus->expects($this->once())
             ->method('dispatch')
             ->with($this->isInstanceOf(SecurityLogMessage::class))
-            ->willReturn(new Envelope(new SecurityLogMessage(action: 'test.action')));
+            ->willReturn(new Envelope(new SecurityLogMessage(action: SecurityLogAction::USER_LOGIN->value)));
 
-        $this->service->log('test.action', $user, $request);
+        $this->service->log(SecurityLogAction::USER_LOGIN, $user, $request);
     }
 
     public function testLogWithoutUserAndRequest(): void
     {
         $this->bus->expects($this->once())
             ->method('dispatch')
-            ->willReturn(new Envelope(new SecurityLogMessage(action: 'test.action')));
+            ->willReturn(new Envelope(new SecurityLogMessage(action: SecurityLogAction::USER_LOGIN->value)));
 
-        // Не должно бросать исключений
-        $this->service->log('test.action');
+        $this->service->log(SecurityLogAction::USER_LOGIN);
     }
 
     public function testLogFallsBackToSyncWhenBusFails(): void
@@ -57,16 +57,14 @@ class SecurityLogServiceTest extends TestCase
         $user->setEmail('test@example.com');
         $request = Request::create('/');
 
-        // Kafka недоступна — bus бросает исключение
         $this->bus->expects($this->once())
             ->method('dispatch')
-            ->willThrowException(new \RuntimeException('Kafka unavailable'));
+            ->willThrowException(new \RuntimeException('Bus unavailable'));
 
-        // Должен произойти fallback — синхронная запись через EM
         $this->em->expects($this->once())->method('persist');
         $this->em->expects($this->once())->method('flush');
 
-        $this->service->log('test.action', $user, $request, ['extra' => 'data']);
+        $this->service->log(SecurityLogAction::USER_LOGIN, $user, $request, ['extra' => 'data']);
     }
 
     public function testLogWithMetadata(): void
@@ -76,10 +74,11 @@ class SecurityLogServiceTest extends TestCase
         $this->bus->expects($this->once())
             ->method('dispatch')
             ->with($this->callback(function (SecurityLogMessage $msg) use ($metadata) {
-                return $msg->metadata === $metadata && $msg->action === 'user.login.failed';
+                return $msg->metadata === $metadata
+                    && $msg->action === SecurityLogAction::USER_LOGIN_FAILED->value;
             }))
-            ->willReturn(new Envelope(new SecurityLogMessage(action: 'user.login.failed')));
+            ->willReturn(new Envelope(new SecurityLogMessage(action: SecurityLogAction::USER_LOGIN_FAILED->value)));
 
-        $this->service->log('user.login.failed', null, null, $metadata);
+        $this->service->log(SecurityLogAction::USER_LOGIN_FAILED, null, null, $metadata);
     }
 }

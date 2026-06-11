@@ -13,3 +13,12 @@ services:
     App\EventListener\ExceptionListener:
         tags:
             - { name: kernel.event_listener, event: kernel.exception }
+
+    # RestProxyTransportFactory требует PSR-17, которого нет в проекте — явно передаём null
+    Koco\Kafka\Messenger\RestProxyTransportFactory:
+        arguments:
+            $logger: null
+            $client: null
+            $requestFactory: null
+            $uriFactory: null
+            $streamFactory: null
