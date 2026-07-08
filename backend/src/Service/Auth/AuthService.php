@@ -110,7 +110,7 @@ class AuthService
             throw new AuthenticationException('Invalid 2FA code');
         }
 
-        // Код верный — инвалидируем токен (защита от replay атак)
+        // Код верный — инвалидируем токен (защита от replay-атак)
         $this->tempTokenService->invalidateTempToken($tempToken);
 
         // Если использовался backup-код — нужно сохранить изменения в entity
